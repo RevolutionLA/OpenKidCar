@@ -5,7 +5,9 @@
       "Bash(git commit -m 'Update docs, roadmap, add hardware BOM and media directories *)",
       "Bash(git push *)",
       "Bash(git commit -m 'Add architecture diagram to README *)",
-      "Bash(git commit -m 'Add product requirements doc \\(干杯一号\\) and restructure roadmap *)"
+      "Bash(git commit -m 'Add product requirements doc \\(干杯一号\\) and restructure roadmap *)",
+      "Bash(git mv *)",
+      "Bash(git commit -m 'Reorganize root directory — move docs into subdirectories *)"
     ]
   }
 }

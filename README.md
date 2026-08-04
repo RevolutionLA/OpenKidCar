@@ -252,14 +252,14 @@ OpenKidCar 采用类似真实汽车的分层设计：
 ```text
 OpenKidCar/
 ├── README.md
-├── roadmap.md
 ├── LICENSE
-├── CONTRIBUTING.md
-├── CODE_OF_CONDUCT.md
-├── SECURITY.md
-├── .github/               # Issue / PR 模板
-├── docs/                  # 架构、协议、开发日志
-│   ├── product_requirements.md   # 干杯一号产品需求
+├── .github/               # 社区文档 + Issue / PR 模板
+│   ├── CONTRIBUTING.md
+│   ├── CODE_OF_CONDUCT.md
+│   └── SECURITY.md
+├── docs/                  # 产品需求、架构、协议、路线图
+│   ├── product_requirements.md
+│   ├── roadmap.md
 │   ├── architecture.md
 │   ├── communication_protocol.md
 │   ├── hardware_bom.md
@@ -286,7 +286,7 @@ OpenKidCar/
 
 项目正处于 V0.1 原型开发阶段。可以先阅读 [产品需求文档](docs/product_requirements.md) 了解干杯一号的完整功能规划，或从 [系统架构](docs/architecture.md)、[通信协议](docs/communication_protocol.md) 和 [开发日志](docs/development_log.md) 开始了解技术细节。
 
-想要参与共同开发？请先阅读 [贡献指南](CONTRIBUTING.md) 与 [行为准则](CODE_OF_CONDUCT.md)。
+想要参与共同开发？请先阅读 [贡献指南](.github/CONTRIBUTING.md) 与 [行为准则](.github/CODE_OF_CONDUCT.md)。
 
 ---
 
@@ -340,7 +340,7 @@ OpenKidCar 欢迎所有人的参与。
 
 都可以参与。
 
-贡献前请阅读 [贡献指南](CONTRIBUTING.md) 与 [行为准则](CODE_OF_CONDUCT.md)。如发现安全问题，请通过 [SECURITY.md](SECURITY.md) 中说明的方式私密反馈。
+贡献前请阅读 [贡献指南](.github/CONTRIBUTING.md) 与 [行为准则](.github/CODE_OF_CONDUCT.md)。如发现安全问题，请通过 [SECURITY.md](.github/SECURITY.md) 中说明的方式私密反馈。
 
 
 你不需要是专家。
