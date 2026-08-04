@@ -2,6 +2,10 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+<p align="center">
+  <img src="media/images/架构图示.png" alt="OpenKidCar 系统架构图示" width="100%">
+</p>
+
 ## 爸爸想给你做一辆小汽车，爸爸想多陪陪你。
 
 > 不是仅买一辆玩具车给你，而是成为你的榜样。

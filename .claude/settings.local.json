@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m 'Update docs, roadmap, add hardware BOM and media directories *)",
+      "Bash(git push *)",
+      "Bash(git commit -m 'Add architecture diagram to README *)"
     ]
   }
 }
