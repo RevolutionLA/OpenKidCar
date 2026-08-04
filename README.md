@@ -1,6 +1,8 @@
 # 🚗 OpenKidCar
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+**🏎️ 干杯一号 Ganbei No.1 — AI 驱动的智能儿童卡丁车**
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) [![PRD](https://img.shields.io/badge/PRD-干杯一号-blue)](docs/product_requirements.md)
 
 <p align="center">
   <img src="media/images/架构图示.png" alt="OpenKidCar 系统架构图示" width="100%">
@@ -257,6 +259,7 @@ OpenKidCar/
 ├── SECURITY.md
 ├── .github/               # Issue / PR 模板
 ├── docs/                  # 架构、协议、开发日志
+│   ├── product_requirements.md   # 干杯一号产品需求
 │   ├── architecture.md
 │   ├── communication_protocol.md
 │   ├── hardware_bom.md
@@ -281,7 +284,7 @@ OpenKidCar/
 
 # 🚀 快速开始
 
-项目正处于 V0.1 原型开发阶段。可以从 [系统架构](docs/architecture.md)、[通信协议](docs/communication_protocol.md) 和 [开发日志](docs/development_log.md) 开始了解项目。
+项目正处于 V0.1 原型开发阶段。可以先阅读 [产品需求文档](docs/product_requirements.md) 了解干杯一号的完整功能规划，或从 [系统架构](docs/architecture.md)、[通信协议](docs/communication_protocol.md) 和 [开发日志](docs/development_log.md) 开始了解技术细节。
 
 想要参与共同开发？请先阅读 [贡献指南](CONTRIBUTING.md) 与 [行为准则](CODE_OF_CONDUCT.md)。
 
