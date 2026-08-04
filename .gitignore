@@ -1,0 +1,31 @@
+# 操作系统
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Arduino / PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+build/
+
+# KiCad
+*.kicad_pcb-bak
+*-backups/
+_autosave-*
+fp-info-cache
+
+# 生成文件
+*.log
