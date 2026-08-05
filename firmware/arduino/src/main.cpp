@@ -122,12 +122,20 @@ static void handle_command(const char* c, const char* p) {
     return;
   }
   if (strcmp(c, cmd::STRIP) == 0) {
-    int mode = atoi(p);
-    if (mode < 0) { send_ack_err("INVALID_ARG"); return; }
-    g_strip_mode = mode;
-    // TODO: 解析颜色/亮度参数（当前仅演示模式切换）
-    hal_set_strip(g_strip_mode, g_strip_color, g_strip_brightness);
-    send_ack_ok();
+    // 参数格式：模式,颜色RRGGBB,亮度(0-255)，如 1,FF0000,100
+    int mode = -1;
+    int brightness = 100;
+    unsigned long color = 0xFFFFFF;
+    int n = sscanf(p, "%d,%lX,%d", &mode, &color, &brightness);
+    if (n >= 1 && mode >= 0 && brightness >= 0 && brightness <= 255) {
+      g_strip_mode = mode;
+      g_strip_color = color;
+      g_strip_brightness = brightness;
+      hal_set_strip(mode, (uint32_t)color, (uint8_t)brightness);
+      send_ack_ok();
+    } else {
+      send_ack_err("INVALID_ARG");
+    }
     return;
   }
   if (strcmp(c, cmd::TURN) == 0) {

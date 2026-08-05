@@ -7,3 +7,6 @@ pyserial>=3.5
 #   .venv\Scripts\python.exe -m pip install -r requirements.txt
 vosk>=0.3.45
 sounddevice>=0.4.6
+numpy>=1.26
+edge-tts>=6.1.0    # 高质量神经语音（晓晓），需联网生成一次，带本地缓存
+pygame>=2.5        # mp3 播放后端

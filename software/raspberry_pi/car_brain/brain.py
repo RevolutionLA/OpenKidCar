@@ -128,6 +128,19 @@ class Brain:
         self.ebrk = True
         self._send(C.EBRK, "ON")
 
+    def set_strip(self, mode: int, color: int = 0xFFFFFF, brightness: int = 100):
+        """RGB 灯带：mode(0 关/1 常亮/2 呼吸...), color(0xRRGGBB), brightness(0-255)。"""
+        self._send(C.STRIP, f"{mode},{color:06X},{brightness}")
+
+    def set_turn(self, direction: str):
+        """转向灯：'L' / 'R' / 'off'。"""
+        d = direction.upper() if direction in ("L", "R") else "OFF"
+        self._send(C.TURN, d)
+
+    def set_horn(self, on: bool):
+        """鸣笛：True 开始，False 停止。"""
+        self._send(C.HORN, "ON" if on else "OFF")
+
     # ================= 心跳 =================
     def start(self):
         self._running = True

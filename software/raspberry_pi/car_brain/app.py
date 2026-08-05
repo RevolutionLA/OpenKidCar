@@ -144,7 +144,7 @@ def main():
 
         def on_voice_command(cmd, params):
             if cmd == "light":
-                log.info("[语音] 开灯指令 -> %s", "ON" if params == "on" else "OFF")
+                log.info("[语音] 灯光指令 -> %s", "ON" if params == "on" else "OFF")
                 brain.set_light(params == "on")
             elif cmd == "mute":
                 log.info("[语音] 静音指令 -> %s", "ON" if params == "on" else "OFF")
@@ -155,6 +155,15 @@ def main():
             elif cmd == "ebrk":
                 log.info("[语音] 急刹指令")
                 brain.remote_ebrake()
+            elif cmd == "strip":
+                log.info("[语音] 灯带指令 -> %s", params)
+                brain.set_strip(1 if params == "on" else 0)
+            elif cmd == "horn":
+                log.info("[语音] 鸣笛指令 -> %s", params)
+                brain.set_horn(params == "on")
+            elif cmd == "turn":
+                log.info("[语音] 转向指令 -> %s", params)
+                brain.set_turn(params)
 
         def on_voice_status(text):
             log.info("[语音] %s", text)
