@@ -88,6 +88,33 @@ py -3.13 -m venv .venv
 
 > 需要电脑有麦克风。语音识别是离线的，不联网。Windows 下会说"我在，请说指令"作为语音反馈。
 
+### 如何添加 / 删除指令
+
+指令的"名单"在 `car_brain/voice.py` 的 **`COMMAND_RULES`** 表（每行 = 一组同义词 + 指令）：
+
+```python
+COMMAND_RULES = (
+    (("打开大灯", "开大灯", "开灯", "亮灯"), ("light", "on")),  # 同义词 → 指令
+    (("刹车", "急刹", "停车"), ("ebrk", None)),
+)
+```
+
+- **加同义词**：往对应行的关键词元组里加词即可
+- **新增指令、复用已有动作**：加一行，指令名用已有的（如 `strip`）
+- **新增全新动作**：加一行 + 在 `car_brain/app.py` 的 `on_voice_command` 里加处理分支；若需要新的协议命令，再给 `car_brain/brain.py` 加方法
+- **删除指令**：直接删掉对应行
+
+### 更换语音音色
+
+设置环境变量 `TTS_VOICE`（默认 `zh-CN-XiaoxiaoNeural` 晓晓）：
+
+```bash
+set TTS_VOICE=zh-CN-YunxiNeural   # 云希（男声）
+set TTS_VOICE=zh-CN-XiaoyiNeural  # 晓伊（女声）
+```
+
+可选项：`XiaoxiaoNeural`(晓晓) / `YunxiNeural`(云希) / `YunyangNeural`(云扬) / `XiaoyiNeural`(晓伊)。
+
 ## 目录规划（后续迭代）
 
 - `audio/` —— 引擎音效合成 + 音频管理
