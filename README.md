@@ -261,6 +261,7 @@ OpenKidCar/
 │   ├── product_requirements.md
 │   ├── roadmap.md
 │   ├── architecture.md
+│   ├── hardware_io_map.md       # 引脚分配图（接口契约）
 │   ├── communication_protocol.md
 │   ├── hardware_bom.md
 │   └── development_log.md
