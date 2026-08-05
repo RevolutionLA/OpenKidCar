@@ -59,9 +59,37 @@ python -m car_brain.app --native ../firmware/arduino/.pio/build/native/program.e
 
 > 这样在 Windows 上无需安装 com0com 虚拟串口，也能看到完整的两端对话。
 
+## 🎙️ 语音控制（vosk 离线识别）
+
+对着麦克风说 **"干杯出来"** 唤醒，再说指令；也可一句话连说（"干杯出来开灯"）。
+
+支持指令：打开大灯 / 关灯 / 静音 / 取消静音 / 一至四档 / 急刹。
+
+### 准备（一次性）
+
+```bash
+# 1. 创建 Python 3.13 虚拟环境（系统 3.14 对语音库支持可能不全）
+py -3.13 -m venv .venv
+
+# 2. 安装依赖
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+
+# 3. 下载 vosk 中文模型（~42MB），解压到用户目录：
+#    https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip
+#    解压后目录应为 ~/vosk-model-small-cn-0.22
+#    也可设置环境变量 VOSK_MODEL 指向模型目录
+```
+
+### 运行语音控制
+
+```bash
+.venv\Scripts\python.exe -m car_brain.app --native <小脑exe路径> --voice --seconds 120
+```
+
+> 需要电脑有麦克风。语音识别是离线的，不联网。Windows 下会说"我在，请说指令"作为语音反馈。
+
 ## 目录规划（后续迭代）
 
-- `voice/` —— 语音唤醒"干杯出来"（vosk 离线识别）
 - `audio/` —— 引擎音效合成 + 音频管理
 - `cloud/` —— 4G 通信 / MQTT / APP 对接
 - `gps/` —— 定位上报

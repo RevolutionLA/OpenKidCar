@@ -1,2 +1,9 @@
 # 干杯一号 —— 大脑（树莓派 / 桌面开发）Python 依赖
 pyserial>=3.5
+
+# ---- 语音控制（可选）----
+# 建议在 Python 3.13+ 虚拟环境安装（系统 Python 3.14 可能缺预编译包）：
+#   py -3.13 -m venv .venv
+#   .venv\Scripts\python.exe -m pip install -r requirements.txt
+vosk>=0.3.45
+sounddevice>=0.4.6

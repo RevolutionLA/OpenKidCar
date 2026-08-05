@@ -83,6 +83,7 @@ def main():
     ap.add_argument("--baud", type=int, default=115200)
     ap.add_argument("--native", help="native 小脑 exe 路径")
     ap.add_argument("--demo", action="store_true", help="自动演示模式")
+    ap.add_argument("--voice", action="store_true", help="启用语音控制（需 vosk + 麦克风）")
     ap.add_argument("--seconds", type=float, default=12.0, help="演示时长")
     args = ap.parse_args()
 
@@ -125,6 +126,44 @@ def main():
     brain.on_event = on_event
     brain.start()
 
+    # ---- 语音控制（可选）----
+    vc = None
+    if args.voice:
+        try:
+            from .voice import VoiceController
+
+            vc = VoiceController()
+        except ImportError as e:
+            log.error("语音库未安装: %s", e)
+            log.error("请在 Python 3.13 虚拟环境安装后运行：")
+            log.error("  .venv/Scripts/python.exe -m pip install vosk sounddevice")
+            sys.exit(1)
+        except FileNotFoundError as e:
+            log.error("%s", e)
+            sys.exit(1)
+
+        def on_voice_command(cmd, params):
+            if cmd == "light":
+                log.info("[语音] 开灯指令 -> %s", "ON" if params == "on" else "OFF")
+                brain.set_light(params == "on")
+            elif cmd == "mute":
+                log.info("[语音] 静音指令 -> %s", "ON" if params == "on" else "OFF")
+                brain.set_mute(params == "on")
+            elif cmd == "gear":
+                log.info("[语音] 档位指令 -> %d 档", params)
+                brain.set_gear(params)
+            elif cmd == "ebrk":
+                log.info("[语音] 急刹指令")
+                brain.remote_ebrake()
+
+        def on_voice_status(text):
+            log.info("[语音] %s", text)
+
+        vc.on_command = on_voice_command
+        vc.on_status = on_voice_status
+        vc.start()
+        log.info("[大脑] 语音已开启 —— 说\"干杯出来\"唤醒，然后说\"打开大灯\"等指令")
+
     # 事件循环 + 主动演示动作
     deadline = time.time() + args.seconds
     demo_step = 0
@@ -136,23 +175,25 @@ def main():
             if frame:
                 cmd, params = frame
                 brain.handle_frame(cmd, params)
-            # 演示动作序列
+            # 自动演示动作序列（仅 --demo 时）
             if args.demo and time.time() - last_action > 3.0:
                 last_action = time.time()
                 demo_step += 1
                 if demo_step == 1:
-                    log.info("[大脑] 语音指令: 设置 3 档")
+                    log.info("[大脑] 演示指令: 设置 3 档")
                     brain.set_gear(3)
                 elif demo_step == 2:
-                    log.info("[大脑] 语音指令: 打开大灯")
+                    log.info("[大脑] 演示指令: 打开大灯")
                     brain.set_light(True)
                 elif demo_step == 3:
-                    log.info("[大脑] 语音指令: 静音")
+                    log.info("[大脑] 演示指令: 静音")
                     brain.set_mute(True)
             time.sleep(0.02)
     except KeyboardInterrupt:
         pass
     finally:
+        if vc:
+            vc.stop()
         brain.stop()
         port.close()
         log.info("[大脑] 退出")
