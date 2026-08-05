@@ -7,7 +7,8 @@
       "Bash(git commit -m 'Add architecture diagram to README *)",
       "Bash(git commit -m 'Add product requirements doc \\(干杯一号\\) and restructure roadmap *)",
       "Bash(git mv *)",
-      "Bash(git commit -m 'Reorganize root directory — move docs into subdirectories *)"
+      "Bash(git commit -m 'Reorganize root directory — move docs into subdirectories *)",
+      "Bash(git commit -m 'Upgrade 4G/GPS to P0 infrastructure; add audio subsystem to IO map *)"
     ]
   }
 }
