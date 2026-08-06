@@ -125,7 +125,8 @@ let currentModel = null, currentModelName = null;
 
 function loadModel(name) {
   if (currentModel) carGroup.remove(currentModel);
-  wheelNodes = []; frontWheels = [];
+  wheelNodes.length = 0;   // 注意：frontWheels 是 const，只能清空不能重新赋值
+  frontWheels.length = 0;
   const loader = new THREE.GLTFLoader();
   loader.load(
     "vendor/" + name + ".glb",
