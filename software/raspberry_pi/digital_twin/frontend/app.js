@@ -214,9 +214,9 @@ function buildProceduralKart() {
 }
 
 const MODEL_CONFIG = {
-  // Khronos CarConcept：车头 -Y；先绕 X 转 90°（-Y→-Z）再绕 Y 转 90°（-Z→-X）
-  // 使车长沿世界 X（屏幕左右），相机正视角看到横着的车
-  car: { rotX: Math.PI / 2, rotY: Math.PI / 2, order: "YXZ" },
+  // Khronos CarConcept：车头 -Y；rotateX(+90°) 使 -Y→-Z，再 rotateY(+90°) 使 -Z→-X
+  // （方法调用顺序绝对明确，不用 Euler order 猜）→ 车头朝屏幕左，横着
+  car: { rotX: Math.PI / 2, rotY: Math.PI / 2 },
 };
 
 function loadModel(name) {
@@ -229,9 +229,10 @@ function loadModel(name) {
     gltf => {
       const model = gltf.scene;
       const cfg = MODEL_CONFIG[name] || {};
-      // 方向归一化：优先用模型配置（rotX/rotY/order），否则长轴是 Y 时躺平到 Z
+      // 方向归一化：优先用模型配置（rotateX 再 rotateY，顺序明确），否则长轴是 Y 时躺平
       if (cfg.rotX !== undefined) {
-        model.rotation.set(cfg.rotX || 0, cfg.rotY || 0, 0, cfg.order || "XYZ");
+        model.rotateX(cfg.rotX || 0);
+        if (cfg.rotY) model.rotateY(cfg.rotY);
       } else {
         const box0 = new THREE.Box3().setFromObject(model);
         const s0 = box0.getSize(new THREE.Vector3());
