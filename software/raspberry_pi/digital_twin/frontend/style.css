@@ -52,7 +52,7 @@ body {
 
 /* ============ 中控台 ============ */
 #controls {
-  top: 76px; left: 20px; z-index: 10;
+  top: 76px; left: 380px; z-index: 10;
   padding: 14px;
   display: grid; grid-template-columns: repeat(2, 118px);
   gap: 10px;
@@ -93,8 +93,8 @@ body {
 
 /* ============ 速度表 ============ */
 #speedometer {
-  bottom: 26px; left: 20px; z-index: 10;
-  width: 200px; height: 200px;
+  top: 76px; left: 20px; z-index: 10;
+  width: 190px; height: 190px;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
 }
 #speed-num { font-size: 64px; font-weight: 800; color: var(--text);
@@ -112,8 +112,8 @@ body {
 
 /* ============ 踏板 ============ */
 .pedal {
-  position: fixed; bottom: 26px; z-index: 10;
-  width: 130px; height: 200px;
+  position: fixed; z-index: 10;
+  width: 130px; height: 170px;
   border-radius: 16px;
   border: 1px solid var(--panel-border);
   background: linear-gradient(180deg, rgba(30,50,70,0.6), rgba(15,25,38,0.7));
@@ -122,8 +122,8 @@ body {
   cursor: pointer;
   overflow: hidden;
 }
-#throttle { left: 250px; }
-#brake { left: 400px; }
+#throttle { left: 20px; top: 460px; }
+#brake { left: 168px; top: 460px; }
 .pedal .p-label { font-size: 15px; color: var(--text); letter-spacing: 2px; z-index: 2; }
 .pedal .p-val { font-size: 20px; font-weight: 700; z-index: 2; margin-top: 4px; }
 #throttle .p-val { color: var(--green); }
@@ -161,7 +161,7 @@ body {
   border-color: rgba(150,120,255,0.4); margin-bottom: 0; }
 
 /* ============ 方向盘 ============ */
-#steering { left: 20px; top: 380px; z-index: 10; width: 150px; height: 168px;
+#steering { left: 20px; top: 284px; z-index: 10; width: 150px; height: 158px;
   padding: 10px; text-align: center; }
 .steer-title { color: var(--dim); font-size: 11px; letter-spacing: 2px; }
 #wheel { width: 104px; height: 104px; border-radius: 50%;
@@ -181,13 +181,13 @@ body {
 #steer-val { color: var(--cyan); font-size: 13px; letter-spacing: 1px; }
 
 /* ============ 数据 ============ */
-#data { right: 20px; top: 468px; z-index: 10; width: 300px; padding: 12px 16px;
+#data { left: 380px; top: 436px; z-index: 10; width: 300px; padding: 12px 16px;
   display: flex; gap: 16px; align-items: center; font-size: 13px; color: var(--dim); }
 #data b { color: var(--text); font-size: 15px; }
 #d-state { margin-left: auto; color: var(--cyan); }
 
 /* ============ 日志 ============ */
-#log { right: 20px; top: 548px; z-index: 10; width: 300px; padding: 12px 16px;
+#log { left: 380px; top: 512px; z-index: 10; width: 300px; padding: 12px 16px;
   min-height: 88px; font-size: 12px; color: var(--dim); line-height: 1.7; }
 
 /* ============ 提示 ============ */
