@@ -87,6 +87,13 @@ body {
   background: rgba(40,50,70,0.6); color: var(--text);
   border: 1px solid var(--panel-border); cursor: pointer; font-size: 12px; }
 .flip-btn:hover { border-color: var(--cyan); box-shadow: 0 0 10px rgba(34,211,238,0.3); }
+.orient-row { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.orient-label { color: var(--dim); font-size: 11px; margin-right: 2px; letter-spacing: 1px; }
+.orient { height: 28px; padding: 0 8px; border-radius: 6px;
+  background: rgba(30,40,60,0.7); color: var(--text);
+  border: 1px solid var(--panel-border); cursor: pointer; font-size: 11px; }
+.orient:hover { border-color: var(--cyan); box-shadow: 0 0 8px rgba(34,211,238,0.3); }
+.orient.reset { color: var(--yellow); }
 #btn-voice.flash { animation: flash 0.8s; }
 @keyframes flash { 50% { box-shadow: 0 0 30px rgba(52,211,153,0.9); } }
 

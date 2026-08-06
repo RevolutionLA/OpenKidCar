@@ -31,7 +31,16 @@
       <button class="gear" data-g="4">4档</button>
     </div>
     <button class="ctrl" id="btn-voice">🎙️ 语音</button>
-    <button class="flip-btn" id="flip-btn">⇄ 翻转朝向</button>
+    <div class="orient-row">
+      <span class="orient-label">方向</span>
+      <button class="orient" data-ax="x" data-dir="-1">X−</button>
+      <button class="orient" data-ax="x" data-dir="1">X+</button>
+      <button class="orient" data-ax="y" data-dir="-1">Y−</button>
+      <button class="orient" data-ax="y" data-dir="1">Y+</button>
+      <button class="orient" data-ax="z" data-dir="-1">Z−</button>
+      <button class="orient" data-ax="z" data-dir="1">Z+</button>
+      <button class="orient reset" id="orient-reset">重置</button>
+    </div>
   </div>
 
   <!-- 速度表 -->

@@ -468,13 +468,30 @@ function bindControls() {
   document.body.addEventListener("click", () => initAudio(), { capture: true });
   document.body.addEventListener("touchstart", () => initAudio(), { capture: true });
 
-  // 翻转朝向（灯光跟随模型一起翻转；headLamp 也同步反转）
-  document.getElementById("flip-btn").addEventListener("click", () => {
+  // 方向微调（实时调整模型朝向，解决无法看到渲染的盲区）
+  document.querySelectorAll(".orient[data-ax]").forEach(b => {
+    b.addEventListener("click", () => {
+      if (!currentModel) return;
+      const a = (Math.PI / 2) * (+b.dataset.dir || 1);
+      if (b.dataset.ax === "x") currentModel.rotateX(a);
+      else if (b.dataset.ax === "y") currentModel.rotateY(a);
+      else if (b.dataset.ax === "z") currentModel.rotateZ(a);
+      currentModel.updateMatrixWorld(true);
+      log(`方向：绕${b.dataset.ax.toUpperCase()}轴转${+b.dataset.dir * 90}°`);
+    });
+  });
+  // 重置方向到配置初始值
+  document.getElementById("orient-reset").addEventListener("click", () => {
     if (currentModel) {
-      currentModel.rotation.y += Math.PI;
-      headLamp.position.z *= -1;
-      headLamp.target.position.z *= -1;
-      log("已翻转朝向");
+      currentModel.quaternion.identity();
+      const cfg = MODEL_CONFIG[currentModelName];
+      if (cfg) {
+        if (cfg.rotY) currentModel.rotateY(cfg.rotY);
+        if (cfg.rotX) currentModel.rotateX(cfg.rotX);
+        if (cfg.rotZ) currentModel.rotateZ(cfg.rotZ);
+      }
+      currentModel.updateMatrixWorld(true);
+      log("方向已重置");
     }
   });
   log("👆 点击画面任意处启用声音");
