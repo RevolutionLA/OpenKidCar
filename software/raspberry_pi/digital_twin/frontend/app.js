@@ -214,12 +214,16 @@ function buildProceduralKart() {
 }
 
 const MODEL_CONFIG = {
-  // Khronos CarConcept：先 rotateY 再 rotateX（THREE 的 rotateX 是右乘，
-  //  先调用 Y 后调用 X，实际才先转 X 后转 Y）：
-  //   长 Y→Z→X（横着）、宽 X→-Z（水平左右）、高 Z→-Y（立着）
-  //  车头 -Y → -X（朝屏幕左）。
-  car: { rotY: Math.PI / 2, rotX: Math.PI / 2 },
+  // 用户实测确认：X−、Y− 抵消初始旋转后方向正确 → 模型原始方向就是对的（无需旋转）
+  car: {},
 };
+
+// 让模型底部贴合地面（世界 y 最低点放到 y=0）
+function sitOnGround(model) {
+  model.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(model);
+  model.position.y += -box.min.y;
+}
 
 function loadModel(name) {
   if (currentModel) carGroup.remove(currentModel);
@@ -231,23 +235,20 @@ function loadModel(name) {
     gltf => {
       const model = gltf.scene;
       const cfg = MODEL_CONFIG[name] || {};
-      // 方向归一化：优先用模型配置。注意 rotateX 是右乘（先调用=后应用），
-      // 所以按"Y→X→Z"顺序调用，使 Y 在 X 之前应用（即实际先转 X 再转 Y）
+      // 方向归一化：只有配置了旋转才应用；car 为空配置 → 保持模型原始方向
       if (cfg.rotX !== undefined || cfg.rotY !== undefined || cfg.rotZ !== undefined) {
         if (cfg.rotY) model.rotateY(cfg.rotY);
         if (cfg.rotX) model.rotateX(cfg.rotX);
         if (cfg.rotZ) model.rotateZ(cfg.rotZ);
-      } else {
+      } else if (cfg.layFlat) {
         const box0 = new THREE.Box3().setFromObject(model);
         const s0 = box0.getSize(new THREE.Vector3());
         if (s0.y > s0.x && s0.y > s0.z) model.rotation.x = -Math.PI / 2;
       }
-      // 统一适配：最长边 = 2.2，贴地
+      // 统一适配：最长边 = 2.2
       const box = new THREE.Box3().setFromObject(model);
       const size = box.getSize(new THREE.Vector3());
       model.scale.setScalar(2.2 / Math.max(size.x, size.z));
-      const b2 = new THREE.Box3().setFromObject(model);
-      model.position.y = -b2.min.y;
       // 灯光挂在模型上（跟随翻转/缩放）
       model.add(lightsGroup);
       // 收集轮子
@@ -263,6 +264,7 @@ function loadModel(name) {
         }
       });
       carGroup.add(model);
+      sitOnGround(model);
       currentModel = model;
       currentModelName = name;
       log("已加载模型: " + name);
@@ -476,7 +478,7 @@ function bindControls() {
       if (b.dataset.ax === "x") currentModel.rotateX(a);
       else if (b.dataset.ax === "y") currentModel.rotateY(a);
       else if (b.dataset.ax === "z") currentModel.rotateZ(a);
-      currentModel.updateMatrixWorld(true);
+      sitOnGround(currentModel);
       log(`方向：绕${b.dataset.ax.toUpperCase()}轴转${+b.dataset.dir * 90}°`);
     });
   });
@@ -490,7 +492,7 @@ function bindControls() {
         if (cfg.rotX) currentModel.rotateX(cfg.rotX);
         if (cfg.rotZ) currentModel.rotateZ(cfg.rotZ);
       }
-      currentModel.updateMatrixWorld(true);
+      sitOnGround(currentModel);
       log("方向已重置");
     }
   });
