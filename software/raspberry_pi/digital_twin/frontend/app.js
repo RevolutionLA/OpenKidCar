@@ -121,13 +121,27 @@ function buildLights() {
   carGroup.add(tl, tr);
 }
 
-function loadKart() {
+let currentModel = null, currentModelName = null;
+
+function loadModel(name) {
+  if (currentModel) carGroup.remove(currentModel);
+  wheelNodes = []; frontWheels = [];
   const loader = new THREE.GLTFLoader();
   loader.load(
-    "vendor/ferrari.glb",
+    "vendor/" + name + ".glb",
     gltf => {
       const model = gltf.scene;
-      model.scale.setScalar(0.7);
+      if (name === "ferrari") {
+        model.scale.setScalar(0.7);
+      } else {
+        // 卡丁车（一体模型）：按包围盒适配到约 2.2 单位长，并贴地
+        const box = new THREE.Box3().setFromObject(model);
+        const size = box.getSize(new THREE.Vector3());
+        const s = 2.2 / Math.max(size.x, size.z);
+        model.scale.setScalar(s);
+        const b2 = new THREE.Box3().setFromObject(model);
+        model.position.y = -b2.min.y;
+      }
       model.traverse(o => {
         if (o.isMesh) {
           o.castShadow = true;
@@ -138,10 +152,13 @@ function loadKart() {
       // 前轮（局部 z < 0 = 车头 -Z）
       wheelNodes.forEach(w => { if (w.position.z < 0) frontWheels.push(w); });
       carGroup.add(model);
-      log("已加载 ferrari 车模 ✓");
+      currentModel = model;
+      currentModelName = name;
+      log("已加载模型: " + name);
+      if (wheelNodes.length === 0) log("该模型无独立轮子节点，整体模拟");
     },
     undefined,
-    err => log("车模加载失败: " + (err && err.message))
+    err => log("模型加载失败: " + (err && err.message))
   );
 }
 
@@ -339,6 +356,12 @@ function bindControls() {
   // 音频：第一次点击启用
   document.body.addEventListener("click", () => initAudio(), { capture: true });
   document.body.addEventListener("touchstart", () => initAudio(), { capture: true });
+
+  // 模型切换
+  document.getElementById("model-select").addEventListener("change", e => {
+    log("切换模型 -> " + e.target.value);
+    loadModel(e.target.value);
+  });
   log("👆 点击画面任意处启用声音");
 }
 
@@ -463,8 +486,8 @@ setInterval(() => {
 initScene();
 carGroup = new THREE.Group();
 buildLights();
-loadKart();
 scene.add(carGroup);
+loadModel("ferrari");
 bindControls();
 bindOrbit();
 initCamera();
