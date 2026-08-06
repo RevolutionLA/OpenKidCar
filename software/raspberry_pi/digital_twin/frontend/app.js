@@ -126,9 +126,84 @@ function buildLights() {
 }
 
 let currentModel = null, currentModelName = null;
-const MODEL_CONFIG = {
-  kart: { rotY: Math.PI },     // 卡丁车车头实际朝 +Z，翻转 180° 归一到 -Z
-};
+
+// 程序化卡丁车（可靠默认；车头朝 -Z，灯光/轮子方向正确）
+function buildProceduralKart() {
+  currentModel = new THREE.Group();
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1e4fd8, metalness: 0.6, roughness: 0.3 });
+  const darkMat = new THREE.MeshStandardMaterial({ color: 0x161c26, metalness: 0.5, roughness: 0.6 });
+  const accentMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, metalness: 0.75, roughness: 0.2 });
+  const glassMat = new THREE.MeshPhysicalMaterial({
+    color: 0x9fd8ff, transparent: true, opacity: 0.4, roughness: 0.05, metalness: 0.1,
+  });
+
+  const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.16, 0.95), darkMat);
+  chassis.position.y = 0.24;
+  const shape = new THREE.Shape();
+  shape.moveTo(0.95, 0);
+  shape.quadraticCurveTo(0.55, 0.36, -0.05, 0.44);
+  shape.quadraticCurveTo(-0.6, 0.52, -0.92, 0.42);
+  shape.lineTo(-0.92, -0.42);
+  shape.quadraticCurveTo(-0.6, -0.52, -0.05, -0.44);
+  shape.quadraticCurveTo(0.55, -0.36, 0.95, 0);
+  const body = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, {
+    depth: 0.34, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.05, bevelSegments: 4,
+  }), bodyMat);
+  body.rotation.x = -Math.PI / 2;
+  body.position.y = 0.55;
+  const wing = new THREE.Mesh(new THREE.BoxGeometry(1.32, 0.07, 0.34), accentMat);
+  wing.position.set(-0.92, 1.0, 0);
+  [[-0.9, 0.62, 0.2], [-0.9, 0.62, -0.2]].forEach(p => {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.5, 0.05), darkMat);
+    post.position.set(...p);
+    currentModel.add(post);
+  });
+  const rollbar = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.035, 8, 18, Math.PI), darkMat);
+  rollbar.position.set(-0.55, 0.95, 0);
+  rollbar.rotation.y = Math.PI / 2;
+  rollbar.rotation.z = Math.PI;
+  const glass = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.32, 0.03), glassMat);
+  glass.position.set(0.38, 0.82, 0);
+  glass.rotation.x = -0.35;
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), darkMat);
+  seat.position.set(-0.2, 0.7, 0.02);
+  const seatBack = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.8, 0.14), darkMat);
+  seatBack.position.set(-0.38, 0.92, -0.3);
+  const steer = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.035, 8, 20), darkMat);
+  steer.position.set(0.55, 0.72, 0.14);
+  steer.rotation.x = Math.PI / 2.6;
+  const tireMat = new THREE.MeshStandardMaterial({ color: 0x0b0d12, roughness: 0.95 });
+  [[-0.65, 0.52], [0.65, 0.52], [-0.65, -0.52], [0.65, -0.52]].forEach(([x, z], idx) => {
+    const w = new THREE.Group();
+    w.userData.isWheel = true;
+    w.userData.isFront = idx < 2;
+    const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.2, 22), tireMat);
+    tire.rotation.z = Math.PI / 2;
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.22, 8), accentMat);
+    hub.rotation.z = Math.PI / 2;
+    w.add(tire, hub);
+    w.position.set(x, 0.3, z);
+    currentModel.add(w);
+  });
+  currentModel.add(chassis, body, wing, rollbar, glass, seat, seatBack, steer);
+  currentModel.position.y = 0.1;
+  currentModel.rotation.y = -Math.PI / 2;   // 车头 +X 转到 -Z
+  currentModel.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  currentModel.add(lightsGroup);
+  carGroup.add(currentModel);
+  // 收集轮子
+  wheelNodes.length = 0; frontWheels.length = 0;
+  currentModel.traverse(o => {
+    if (o.userData.isWheel) {
+      wheelNodes.push(o);
+      if (o.userData.isFront) frontWheels.push(o);
+    }
+  });
+  currentModelName = "standard";
+  log("已显示卡丁车");
+}
+
+const MODEL_CONFIG = {};
 
 function loadModel(name) {
   if (currentModel) carGroup.remove(currentModel);
@@ -503,7 +578,7 @@ initScene();
 carGroup = new THREE.Group();
 buildLights();
 scene.add(carGroup);
-loadModel("kart");
+buildProceduralKart();
 bindControls();
 bindOrbit();
 initCamera();
