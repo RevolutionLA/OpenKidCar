@@ -174,8 +174,8 @@ class CerebellumSim:
             self.ebrk = False
             self._ack()
         elif cmd == C.EBRK:
-            self.ebrk = True
-            self.brake = 100
+            self.ebrk = (params == "ON")
+            self.brake = 100 if self.ebrk else 0
             self._ack()
 
     def _ack(self):

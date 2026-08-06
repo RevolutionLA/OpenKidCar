@@ -98,9 +98,10 @@ class Brain:
             self._send(C.MUTE, "ON" if self.mute else "OFF")
             self._emit("mute", self.mute)
         elif name == C.EBRK_BTN:
-            self.ebrk = True
-            self._send(C.EBRK, "ON")
-            self._emit("ebrk")
+            # 急刹 toggle：按下触发，再按解除
+            self.ebrk = not self.ebrk
+            self._send(C.EBRK, "ON" if self.ebrk else "OFF")
+            self._emit("ebrk", self.ebrk)
         elif name == C.STRIP_BTN:
             # 灯带：大脑决策切换，下发 STRIP 命令给小脑执行
             self.strip = not self.strip

@@ -110,7 +110,7 @@ uint8_t crc8(const char* data, size_t len) {
 | `MUTE` | ON / OFF | 引擎音效静音 | ✅ |
 | `HORN` | ON / OFF | 鸣笛 | ✅ |
 | `BRAKE` | ON / OFF | 制动（缓刹） | ✅ |
-| `EBRK` | ON | 远程急刹（最高优先级） | ✅ 安全命令 |
+| `EBRK` | ON / OFF | 远程急刹（最高优先级）/ 解除急刹 | ✅ 安全命令 |
 | `STATUS` | GET | 请求状态上报 | ✅ |
 | `PING` | - | 心跳请求 | ✅ |
 

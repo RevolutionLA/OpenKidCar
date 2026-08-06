@@ -215,7 +215,8 @@ function buildProceduralKart() {
 
 const MODEL_CONFIG = {
   // 用户实测确认：X−、Y− 抵消初始旋转后方向正确 → 模型原始方向就是对的（无需旋转）
-  car: {},
+  // noseRotX：灯光组绕 X 转 -90°（CarConcept 车头在 -Y，把"车头 -Z"约定转到 -Y）
+  car: { noseRotX: -Math.PI / 2 },
 };
 
 // 让模型底部贴合地面（世界 y 最低点放到 y=0）
@@ -249,7 +250,8 @@ function loadModel(name) {
       const box = new THREE.Box3().setFromObject(model);
       const size = box.getSize(new THREE.Vector3());
       model.scale.setScalar(2.2 / Math.max(size.x, size.z));
-      // 灯光挂在模型上（跟随翻转/缩放）
+      // 灯光挂在模型上（跟随翻转/缩放），并按车头方向旋转灯光组
+      if (cfg.noseRotX) lightsGroup.rotation.x = cfg.noseRotX;
       model.add(lightsGroup);
       // 收集轮子
       model.traverse(o => {
@@ -470,32 +472,6 @@ function bindControls() {
   document.body.addEventListener("click", () => initAudio(), { capture: true });
   document.body.addEventListener("touchstart", () => initAudio(), { capture: true });
 
-  // 方向微调（实时调整模型朝向，解决无法看到渲染的盲区）
-  document.querySelectorAll(".orient[data-ax]").forEach(b => {
-    b.addEventListener("click", () => {
-      if (!currentModel) return;
-      const a = (Math.PI / 2) * (+b.dataset.dir || 1);
-      if (b.dataset.ax === "x") currentModel.rotateX(a);
-      else if (b.dataset.ax === "y") currentModel.rotateY(a);
-      else if (b.dataset.ax === "z") currentModel.rotateZ(a);
-      sitOnGround(currentModel);
-      log(`方向：绕${b.dataset.ax.toUpperCase()}轴转${+b.dataset.dir * 90}°`);
-    });
-  });
-  // 重置方向到配置初始值
-  document.getElementById("orient-reset").addEventListener("click", () => {
-    if (currentModel) {
-      currentModel.quaternion.identity();
-      const cfg = MODEL_CONFIG[currentModelName];
-      if (cfg) {
-        if (cfg.rotY) currentModel.rotateY(cfg.rotY);
-        if (cfg.rotX) currentModel.rotateX(cfg.rotX);
-        if (cfg.rotZ) currentModel.rotateZ(cfg.rotZ);
-      }
-      sitOnGround(currentModel);
-      log("方向已重置");
-    }
-  });
   log("👆 点击画面任意处启用声音");
 }
 
