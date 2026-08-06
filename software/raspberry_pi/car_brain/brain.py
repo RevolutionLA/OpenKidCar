@@ -29,6 +29,7 @@ class Brain:
         # ---- 大脑维护的状态视图（以大脑决策为准）----
         self.gear = 2
         self.light = False
+        self.strip = False
         self.mute = False
         self.seat = False
         self.ebrk = False
@@ -101,7 +102,10 @@ class Brain:
             self._send(C.EBRK, "ON")
             self._emit("ebrk")
         elif name == C.STRIP_BTN:
-            self._emit("strip_btn")
+            # 灯带：大脑决策切换，下发 STRIP 命令给小脑执行
+            self.strip = not self.strip
+            self._send(C.STRIP, f"{1 if self.strip else 0},FFFFFF,100")
+            self._emit("strip", self.strip)
         elif name == C.HORN_BTN:
             self._emit("horn_btn")
         elif name == C.TALK_BTN:
