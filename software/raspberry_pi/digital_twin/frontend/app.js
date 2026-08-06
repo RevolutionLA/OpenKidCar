@@ -94,35 +94,35 @@ let wheelNodes = [];   // 模型内 wheel_* 节点
 let lightsGroup;
 
 function buildLights() {
-  // 灯光组挂在模型上。CarConcept 车头朝 +Z（数据验证 BodyHeadlights z=+2.18）
-  // 约定：前灯在 +Z（车头），刹车灯在 -Z（车尾）
+  // 灯光组挂在模型上。Three.js 权威数据：BodyHeadlights z=-2.38（车头 -Z）、
+  // BodyTaillights z=+1.93（车尾 +Z）。约定：前灯在 -Z（车头），刹车灯在 +Z（车尾）
   lightsGroup = new THREE.Group();
-  // 前灯（车头 +Z）
+  // 前灯（车头 -Z）
   headlightMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0 });
-  [[0.4, 0.45, 1.05], [-0.4, 0.45, 1.05]].forEach(p => {
+  [[0.4, 0.45, -1.05], [-0.4, 0.45, -1.05]].forEach(p => {
     const l = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.1, 0.04), headlightMat);
     l.position.set(...p);
     lightsGroup.add(l);
   });
-  // 刹车灯（车尾 -Z）
+  // 刹车灯（车尾 +Z）
   brakeMat = new THREE.MeshStandardMaterial({ color: 0xff2020, emissive: 0xff2020, emissiveIntensity: 0 });
   const brakeBar = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.08, 0.04), brakeMat);
-  brakeBar.position.set(0, 0.45, -1.05);
+  brakeBar.position.set(0, 0.45, 1.05);
   lightsGroup.add(brakeBar);
-  // 灯带（车身两侧）
+  // 灯带（车身两侧，随车长）
   stripMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0 });
   [[0.6, 0.28, 0], [-0.6, 0.28, 0]].forEach(p => {
     const s = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.04, 1.6), stripMat);
     s.position.set(...p);
     lightsGroup.add(s);
   });
-  // 转向灯（车头两侧 +Z）
+  // 转向灯（车头两侧 -Z）
   turnLMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0xffaa00, emissiveIntensity: 0 });
   turnRMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0xffaa00, emissiveIntensity: 0 });
   const tl = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 0.04), turnLMat);
-  tl.position.set(0.5, 0.45, 1.05);
+  tl.position.set(0.5, 0.45, -1.05);
   const tr = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 0.04), turnRMat);
-  tr.position.set(-0.5, 0.45, 1.05);
+  tr.position.set(-0.5, 0.45, -1.05);
   lightsGroup.add(tl, tr);
 }
 
@@ -259,13 +259,16 @@ function loadModel(name) {
         if (o.isMesh) {
           o.castShadow = true;
           const n = o.name.toLowerCase();
-          // 精确匹配 WheelFrontL/R、WheelRearL/R（排除 Rim/Disc/Pad/方向盘）
-          if (/^wheel(front|rear)[lr]$/.test(n)) {
+          // 前轮以 WheelFront 开头（含 WheelFrontL/R 及其子节点）；后轮类似
+          if (n.startsWith("wheelfront")) {
             wheelNodes.push(o);
-            if (n.includes("front")) frontWheels.push(o);
+            frontWheels.push(o);
+          } else if (n.startsWith("wheelrear")) {
+            wheelNodes.push(o);
           }
         }
       });
+      log(`轮子节点: ${wheelNodes.length} 个，前轮: ${frontWheels.length} 个`);
       carGroup.add(model);
       sitOnGround(model);
       currentModel = model;
@@ -481,9 +484,9 @@ function initCamera() {
       rec.textContent = "● REC";
       log("[摄像头] 已连接");
     })
-    .catch(() => {
+    .catch(e => {
       rec.textContent = "摄像头不可用";
-      log("[摄像头] 无法访问（可能无摄像头或无权限）");
+      log("[摄像头] " + (e && e.message) + " —— 请允许权限/检查摄像头");
     });
   document.getElementById("cam-flip").addEventListener("click", () => {
     cam.classList.toggle("flip");
