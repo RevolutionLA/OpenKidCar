@@ -91,8 +91,6 @@ function initScene() {
 // ================= 3D 车模（ferrari GLB + 附加灯光 mesh） =================
 let wheelNodes = [];   // 模型内 wheel_* 节点
 
-let lightsGroup;
-
 function buildLights() {
   // 只创建灯光材质；mesh 由 attachLightsToModel 挂到模型的车灯节点上
   headlightMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0 });
@@ -148,91 +146,6 @@ function attachLightsToModel(model) {
 let currentModel = null, currentModelName = null;
 
 // 程序化卡丁车（车头朝 -Z，轮子朝向正确，灯光/转向联动正常）
-function buildProceduralKart() {
-  currentModel = new THREE.Group();
-  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x3d6bff, metalness: 0.5, roughness: 0.25 });
-  const darkMat = new THREE.MeshStandardMaterial({ color: 0x1a2230, metalness: 0.5, roughness: 0.6 });
-  const accentMat = new THREE.MeshStandardMaterial({ color: 0xffc422, metalness: 0.8, roughness: 0.2 });
-  const glassMat = new THREE.MeshPhysicalMaterial({
-    color: 0x9fd8ff, transparent: true, opacity: 0.4, roughness: 0.05, metalness: 0.1,
-  });
-
-  // 底盘（宽 X × 长 Z，车头 -Z）
-  const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.16, 1.9), darkMat);
-  chassis.position.y = 0.24;
-  // 车身（Extrude：X=宽, Y=长→世界 Z，车头在 -Z）
-  const shape = new THREE.Shape();
-  shape.moveTo(0, -0.98);
-  shape.quadraticCurveTo(0.38, -0.62, 0.46, -0.05);
-  shape.quadraticCurveTo(0.52, 0.58, 0.44, 0.92);
-  shape.lineTo(-0.44, 0.92);
-  shape.quadraticCurveTo(-0.52, 0.58, -0.46, -0.05);
-  shape.quadraticCurveTo(-0.38, -0.62, 0, -0.98);
-  const body = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, {
-    depth: 0.34, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.04, bevelSegments: 4,
-  }), bodyMat);
-  body.rotation.x = -Math.PI / 2;
-  body.position.y = 0.5;
-
-  // 尾翼（车尾 +Z）
-  const wing = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.07, 0.34), accentMat);
-  wing.position.set(0, 0.98, 0.9);
-  [[0, 0.6, 0.72], [0.45, 0.6, 0.72], [-0.45, 0.6, 0.72]].forEach(p => {
-    const post = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.5, 0.05), darkMat);
-    post.position.set(...p);
-    currentModel.add(post);
-  });
-  // 防滚架（车尾上方）
-  const rollbar = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.035, 8, 18, Math.PI), darkMat);
-  rollbar.position.set(0, 0.95, 0.5);
-  rollbar.rotation.y = Math.PI / 2;
-  rollbar.rotation.z = Math.PI;
-  // 挡风玻璃（车头 -Z 附近）
-  const glass = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.3, 0.03), glassMat);
-  glass.position.set(0, 0.8, -0.35);
-  glass.rotation.x = 0.35;
-  // 座椅（中部）
-  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.45, 0.5), darkMat);
-  seat.position.set(0, 0.68, 0.1);
-  const seatBack = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.75, 0.14), darkMat);
-  seatBack.position.set(0, 0.9, 0.4);
-  // 方向盘（中前，朝驾驶位）
-  const steer = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.035, 8, 20), darkMat);
-  steer.position.set(0, 0.72, -0.28);
-  steer.rotation.x = Math.PI / 2.6;
-
-  // 车轮（X 左右 × Z 前后，车头 -Z；轴沿 X=车宽，朝向正确）
-  const tireMat = new THREE.MeshStandardMaterial({ color: 0x0b0d12, roughness: 0.95 });
-  [[-0.62, 0.55], [0.62, 0.55], [-0.62, -0.55], [0.62, -0.55]].forEach(([x, z], idx) => {
-    const w = new THREE.Group();
-    w.userData.isWheel = true;
-    w.userData.isFront = z < 0;   // 车头 -Z
-    const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.2, 24), tireMat);
-    tire.rotation.z = Math.PI / 2;
-    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.22, 8), accentMat);
-    hub.rotation.z = Math.PI / 2;
-    w.add(tire, hub);
-    w.position.set(x, 0.3, z);
-    currentModel.add(w);
-  });
-
-  currentModel.add(chassis, body, wing, rollbar, glass, seat, seatBack, steer);
-  currentModel.position.y = 0.1;
-  currentModel.traverse(o => { if (o.isMesh) o.castShadow = true; });
-  currentModel.add(lightsGroup);
-  carGroup.add(currentModel);
-  // 收集轮子
-  wheelNodes.length = 0; frontWheels.length = 0;
-  currentModel.traverse(o => {
-    if (o.userData.isWheel) {
-      wheelNodes.push(o);
-      if (o.userData.isFront) frontWheels.push(o);
-    }
-  });
-  currentModelName = "standard";
-  log("已显示卡丁车");
-}
-
 const MODEL_CONFIG = {
   // 模型原始方向即正确；灯光已按车头 +Z 直接定位（buildLights），无需旋转
   car: {},
