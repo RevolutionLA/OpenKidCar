@@ -76,8 +76,8 @@ function initScene() {
   scene.add(glowLight);
 
   headLamp = new THREE.SpotLight(0xffffff, 0, 25, Math.PI / 5, 0.4);
-  headLamp.position.set(0, 0.5, 1.3);
-  headLamp.target.position.set(0, 0, 6);
+  headLamp.position.set(0, 0.5, -1.3);   // 车头朝 -Z
+  headLamp.target.position.set(0, 0, -6);
   scene.add(headLamp);
   scene.add(headLamp.target);
 
@@ -88,127 +88,61 @@ function initScene() {
   });
 }
 
-// ================= 3D 卡丁车模型（程序化精细版） =================
-function buildCar() {
-  carGroup = new THREE.Group();
-  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1e4fd8, metalness: 0.65, roughness: 0.28 });
-  const darkMat = new THREE.MeshStandardMaterial({ color: 0x161c26, metalness: 0.5, roughness: 0.6 });
-  const accentMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, metalness: 0.75, roughness: 0.2 });
-  const glassMat = new THREE.MeshPhysicalMaterial({
-    color: 0x9fd8ff, transparent: true, opacity: 0.4,
-    roughness: 0.05, metalness: 0.1,
-  });
+// ================= 3D 车模（ferrari GLB + 附加灯光 mesh） =================
+let wheelNodes = [];   // 模型内 wheel_* 节点
 
-  // ---- 底盘 ----
-  const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.16, 0.95), darkMat);
-  chassis.position.y = 0.24;
-
-  // ---- 车身（俯视轮廓挤出，圆润） ----
-  const shape = new THREE.Shape();
-  shape.moveTo(0.95, 0);
-  shape.quadraticCurveTo(0.55, 0.36, -0.05, 0.44);
-  shape.quadraticCurveTo(-0.6, 0.52, -0.92, 0.42);
-  shape.lineTo(-0.92, -0.42);
-  shape.quadraticCurveTo(-0.6, -0.52, -0.05, -0.44);
-  shape.quadraticCurveTo(0.55, -0.36, 0.95, 0);
-  const bodyGeo = new THREE.ExtrudeGeometry(shape, {
-    depth: 0.34, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.05, bevelSegments: 4,
-  });
-  const body = new THREE.Mesh(bodyGeo, bodyMat);
-  body.rotation.x = -Math.PI / 2;
-  body.position.y = 0.55;
-
-  // ---- 尾翼 ----
-  const wing = new THREE.Mesh(new THREE.BoxGeometry(1.32, 0.07, 0.34), accentMat);
-  wing.position.set(-0.92, 1.0, 0);
-  [[-0.9, 0.62, 0.2], [-0.9, 0.62, -0.2]].forEach(p => {
-    const post = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.5, 0.05), darkMat);
-    post.position.set(...p);
-    carGroup.add(post);
-  });
-
-  // ---- 防滚架 ----
-  const rollbar = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.035, 8, 18, Math.PI), darkMat);
-  rollbar.position.set(-0.55, 0.95, 0);
-  rollbar.rotation.y = Math.PI / 2;
-  rollbar.rotation.z = Math.PI;
-  carGroup.add(rollbar);
-
-  // ---- 挡风玻璃 ----
-  const glass = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.32, 0.03), glassMat);
-  glass.position.set(0.38, 0.82, 0);
-  glass.rotation.x = -0.35;
-  carGroup.add(glass);
-
-  // ---- 座椅 + 头枕 ----
-  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), darkMat);
-  seat.position.set(-0.2, 0.7, 0.02);
-  const seatBack = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.8, 0.14), darkMat);
-  seatBack.position.set(-0.38, 0.92, -0.3);
-  const headrest = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.26, 0.14), darkMat);
-  headrest.position.set(-0.5, 1.28, -0.26);
-  carGroup.add(seat, seatBack, headrest);
-
-  // ---- 方向盘 ----
-  const steer = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.035, 8, 20), darkMat);
-  steer.position.set(0.55, 0.72, 0.14);
-  steer.rotation.x = Math.PI / 2.6;
-  carGroup.add(steer);
-
-  // ---- 车轮（轮胎 + 轮毂 + 辐条），前轮用于转向 ----
-  const tireMat = new THREE.MeshStandardMaterial({ color: 0x0b0d12, roughness: 0.95 });
-  [[-0.65, 0.52], [0.65, 0.52], [-0.65, -0.52], [0.65, -0.52]].forEach(([x, z], idx) => {
-    const w = new THREE.Group();
-    const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.2, 24), tireMat);
-    tire.rotation.z = Math.PI / 2;
-    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.22, 8), accentMat);
-    hub.rotation.z = Math.PI / 2;
-    // 辐条
-    for (let s = 0; s < 4; s++) {
-      const sp = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.02, 0.21), accentMat);
-      sp.rotation.z = (s * Math.PI) / 4 + Math.PI / 4;
-      w.add(sp);
-    }
-    w.add(tire, hub);
-    w.position.set(x, 0.3, z);
-    wheels.push(w);
-    if (idx < 2) frontWheels.push(w);
-  });
-
-  // ---- 前灯 ----
+function buildLights() {
+  // 前灯（车头 -Z 方向）
   headlightMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0 });
-  [[0.55, 0.52, 0.44], [-0.55, 0.52, 0.44]].forEach(([x, y, z]) => {
-    const l = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.14, 0.04), headlightMat);
-    l.position.set(x, y, z);
+  [[0.32, 0.42, -0.95], [-0.32, 0.42, -0.95]].forEach(p => {
+    const l = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.12, 0.04), headlightMat);
+    l.position.set(...p);
     carGroup.add(l);
   });
-
-  // ---- 刹车灯 ----
+  // 刹车灯（车尾 +Z）
   brakeMat = new THREE.MeshStandardMaterial({ color: 0xff2020, emissive: 0xff2020, emissiveIntensity: 0 });
-  const brakeBar = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.12, 0.04), brakeMat);
-  brakeBar.position.set(0, 0.62, -0.44);
+  const brakeBar = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.1, 0.04), brakeMat);
+  brakeBar.position.set(0, 0.42, 0.98);
   carGroup.add(brakeBar);
-
-  // ---- 灯带 ----
+  // 灯带（车身两侧）
   stripMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0 });
-  [[0.8, 0], [-0.8, 0]].forEach(([x, z]) => {
-    const s = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.05, 0.9), stripMat);
-    s.position.set(x, 0.47, z);
+  [[0.62, 0.3, 0], [-0.62, 0.3, 0]].forEach(p => {
+    const s = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 1.4), stripMat);
+    s.position.set(...p);
     carGroup.add(s);
   });
-
-  // ---- 转向灯 ----
+  // 转向灯（车头两侧）
   turnLMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0xffaa00, emissiveIntensity: 0 });
   turnRMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0xffaa00, emissiveIntensity: 0 });
-  const tl = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.1, 0.04), turnLMat);
-  tl.position.set(0.7, 0.52, 0.44);
-  const tr = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.1, 0.04), turnRMat);
-  tr.position.set(-0.7, 0.52, 0.44);
+  const tl = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.08, 0.04), turnLMat);
+  tl.position.set(0.45, 0.42, -1.05);
+  const tr = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.08, 0.04), turnRMat);
+  tr.position.set(-0.45, 0.42, -1.05);
   carGroup.add(tl, tr);
+}
 
-  carGroup.add(chassis, body, wing, ...wheels);
-  carGroup.position.y = 0.15;
-  scene.add(carGroup);
+function loadKart() {
+  const loader = new THREE.GLTFLoader();
+  loader.load(
+    "vendor/ferrari.glb",
+    gltf => {
+      const model = gltf.scene;
+      model.scale.setScalar(0.7);
+      model.traverse(o => {
+        if (o.isMesh) {
+          o.castShadow = true;
+          const n = o.name.toLowerCase();
+          if (n.startsWith("wheel_")) wheelNodes.push(o);
+        }
+      });
+      // 前轮（局部 z < 0 = 车头 -Z）
+      wheelNodes.forEach(w => { if (w.position.z < 0) frontWheels.push(w); });
+      carGroup.add(model);
+      log("已加载 ferrari 车模 ✓");
+    },
+    undefined,
+    err => log("车模加载失败: " + (err && err.message))
+  );
 }
 
 // ================= 灯光联动 =================
@@ -227,8 +161,8 @@ function updateVisuals() {
 // ================= 车动画（基于后端状态） =================
 function updateCar(dt) {
   const t = Date.now() / 1000;
-  wheels.forEach(w => (w.rotation.x += car.speed * dt * 3.2));
-  carGroup.position.y = 0.15 + Math.sin(t * 30) * car.speed * 0.0022;
+  wheelNodes.forEach(w => (w.rotation.x += car.speed * dt * 3.2));
+  carGroup.position.y = 0.05 + Math.sin(t * 30) * car.speed * 0.0022;
   carGroup.rotation.z = Math.sin(t * 18) * car.speed * 0.0016;
   carGroup.rotation.x = Math.sin(t * 26) * car.speed * 0.0009;
   carGroup.rotation.y = car.steer * 0.45;
@@ -527,7 +461,10 @@ setInterval(() => {
 
 // ================= 启动 =================
 initScene();
-buildCar();
+carGroup = new THREE.Group();
+buildLights();
+loadKart();
+scene.add(carGroup);
 bindControls();
 bindOrbit();
 initCamera();
@@ -536,3 +473,4 @@ updateOrbit();
 animate();
 connect();
 log("干杯一号 数字孪生启动，正在连接大脑+小脑…");
+log("正在加载车模…");
