@@ -1,17 +1,41 @@
 /* ============================================================
- * 干杯一号 · 数字孪生驾驶舱 v2
- * 3D 卡丁车（原地模拟）+ 灯光联动 + 方向盘/转向灯 + 真实摄像头
- * + 录音对讲 + Web Audio 引擎声/喇叭
+ * 干杯一号 · 数字孪生驾驶舱 v3
+ * 前端 ↔ WebSocket ↔ Python后端(Brain + CerebellumSim + vosk语音)
+ * 状态全部来自后端大脑/小脑；操作全部发往后端。
  * ============================================================ */
 
-// ================= 仿真状态 =================
+// ================= 状态（由后端同步） =================
 const car = {
-  throttle: 0, brake: 0, gear: 2,
+  online: false, throttle: 0, brake: 0, gear: 2, steer: 0,
   light: false, mute: false, strip: false, horn: false, ebrk: false,
-  steer: 0, turn: "off",          // steer: -1..1, turn: L/R/off
-  speed: 0,
+  speed: 0, motor: 0, turn: "off",
 };
 const GEAR_MAX = { 1: 10, 2: 15, 3: 20, 4: 25 };
+const BTN_NAMES = {
+  light: "LIGHT_BTN", mute: "MUTE_BTN", strip: "STRIP_BTN",
+  horn: "HORN_BTN", ebrk: "EBRK_BTN",
+};
+
+// ================= WebSocket =================
+let ws = null;
+function connect() {
+  ws = new WebSocket("ws://" + location.host + "/ws");
+  ws.onopen = () => log("已连接：大脑 + 小脑在线");
+  ws.onclose = () => { log("连接断开，5秒后重连…"); setTimeout(connect, 5000); };
+  ws.onmessage = e => {
+    const m = JSON.parse(e.data);
+    if (m.type === "state") applyState(m.data);
+    else if (m.type === "log") log(m.text);
+  };
+}
+function send(obj) {
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj));
+}
+function applyState(s) {
+  Object.assign(car, s);
+  car.turn = car.steer < -0.25 ? "L" : car.steer > 0.25 ? "R" : "off";
+  updateHUD();
+}
 
 // ================= Three.js 场景 =================
 let scene, camera, renderer, carGroup;
@@ -28,12 +52,12 @@ function initScene() {
   renderer.shadowMap.enabled = true;
   document.getElementById("scene").appendChild(renderer.domElement);
 
-  scene.add(new THREE.AmbientLight(0x3a4a5c, 0.55));
+  scene.add(new THREE.AmbientLight(0x3a4a5c, 0.6));
   const dir = new THREE.DirectionalLight(0xffffff, 0.9);
   dir.position.set(6, 9, 5);
   dir.castShadow = true;
   scene.add(dir);
-  const rim = new THREE.DirectionalLight(0x22d3ee, 0.25);
+  const rim = new THREE.DirectionalLight(0x22d3ee, 0.3);
   rim.position.set(-5, 3, -4);
   scene.add(rim);
 
@@ -45,6 +69,11 @@ function initScene() {
   ground.receiveShadow = true;
   scene.add(ground);
   scene.add(new THREE.GridHelper(80, 40, 0x1a2a3a, 0x12202e));
+
+  // 地面反光点（氛围）
+  const glowLight = new THREE.PointLight(0x22d3ee, 0.5, 12);
+  glowLight.position.set(0, 1.6, 0);
+  scene.add(glowLight);
 
   headLamp = new THREE.SpotLight(0xffffff, 0, 25, Math.PI / 5, 0.4);
   headLamp.position.set(0, 0.5, 1.3);
@@ -59,70 +88,87 @@ function initScene() {
   });
 }
 
-// ================= 3D 卡丁车模型 =================
+// ================= 3D 卡丁车模型（程序化精细版） =================
 function buildCar() {
   carGroup = new THREE.Group();
-  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1e4fd8, metalness: 0.6, roughness: 0.3 });
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1e4fd8, metalness: 0.65, roughness: 0.28 });
   const darkMat = new THREE.MeshStandardMaterial({ color: 0x161c26, metalness: 0.5, roughness: 0.6 });
-  const accentMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, metalness: 0.7, roughness: 0.2 });
+  const accentMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, metalness: 0.75, roughness: 0.2 });
+  const glassMat = new THREE.MeshPhysicalMaterial({
+    color: 0x9fd8ff, transparent: true, opacity: 0.4,
+    roughness: 0.05, metalness: 0.1,
+  });
 
   // ---- 底盘 ----
-  const under = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.1, 1.0), darkMat);
-  under.position.y = 0.14;
-  const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.18, 0.9), darkMat);
-  chassis.position.y = 0.26;
+  const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.16, 0.95), darkMat);
+  chassis.position.y = 0.24;
 
-  // ---- 车身 ----
-  const main = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.34, 0.82), bodyMat);
-  main.position.set(-0.05, 0.5, 0);
-  // 前鼻（两层堆出楔形）
-  const nose1 = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.22, 0.66), bodyMat);
-  nose1.position.set(0.98, 0.44, 0);
-  const nose2 = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.13, 0.5), bodyMat);
-  nose2.position.set(1.3, 0.32, 0);
+  // ---- 车身（俯视轮廓挤出，圆润） ----
+  const shape = new THREE.Shape();
+  shape.moveTo(0.95, 0);
+  shape.quadraticCurveTo(0.55, 0.36, -0.05, 0.44);
+  shape.quadraticCurveTo(-0.6, 0.52, -0.92, 0.42);
+  shape.lineTo(-0.92, -0.42);
+  shape.quadraticCurveTo(-0.6, -0.52, -0.05, -0.44);
+  shape.quadraticCurveTo(0.55, -0.36, 0.95, 0);
+  const bodyGeo = new THREE.ExtrudeGeometry(shape, {
+    depth: 0.34, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.05, bevelSegments: 4,
+  });
+  const body = new THREE.Mesh(bodyGeo, bodyMat);
+  body.rotation.x = -Math.PI / 2;
+  body.position.y = 0.55;
 
   // ---- 尾翼 ----
-  const wing = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.08, 0.34), accentMat);
-  wing.position.set(-0.85, 0.98, 0);
-  [[-0.85, 0.6, 0.2], [-0.85, 0.6, -0.2]].forEach(p => {
-    const post = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.55, 0.05), darkMat);
+  const wing = new THREE.Mesh(new THREE.BoxGeometry(1.32, 0.07, 0.34), accentMat);
+  wing.position.set(-0.92, 1.0, 0);
+  [[-0.9, 0.62, 0.2], [-0.9, 0.62, -0.2]].forEach(p => {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.5, 0.05), darkMat);
     post.position.set(...p);
     carGroup.add(post);
   });
 
   // ---- 防滚架 ----
-  const rollbar = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.03, 8, 18, Math.PI), darkMat);
-  rollbar.position.set(-0.55, 0.82, 0);
+  const rollbar = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.035, 8, 18, Math.PI), darkMat);
+  rollbar.position.set(-0.55, 0.95, 0);
   rollbar.rotation.y = Math.PI / 2;
   rollbar.rotation.z = Math.PI;
+  carGroup.add(rollbar);
 
-  // ---- 排气管 ----
-  const exhaust = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.5, 10), darkMat);
-  exhaust.rotation.x = Math.PI / 2;
-  exhaust.position.set(0.65, 0.3, -0.46);
+  // ---- 挡风玻璃 ----
+  const glass = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.32, 0.03), glassMat);
+  glass.position.set(0.38, 0.82, 0);
+  glass.rotation.x = -0.35;
+  carGroup.add(glass);
 
   // ---- 座椅 + 头枕 ----
-  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.4, 0.42), darkMat);
-  seat.position.set(-0.25, 0.62, 0.06);
-  const seatBack = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.72, 0.1), darkMat);
-  seatBack.position.set(-0.4, 0.82, -0.22);
-  const headrest = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.24, 0.12), darkMat);
-  headrest.position.set(-0.48, 1.15, -0.2);
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), darkMat);
+  seat.position.set(-0.2, 0.7, 0.02);
+  const seatBack = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.8, 0.14), darkMat);
+  seatBack.position.set(-0.38, 0.92, -0.3);
+  const headrest = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.26, 0.14), darkMat);
+  headrest.position.set(-0.5, 1.28, -0.26);
+  carGroup.add(seat, seatBack, headrest);
 
   // ---- 方向盘 ----
   const steer = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.035, 8, 20), darkMat);
-  steer.position.set(0.55, 0.7, 0.14);
+  steer.position.set(0.55, 0.72, 0.14);
   steer.rotation.x = Math.PI / 2.6;
+  carGroup.add(steer);
 
-  // ---- 车轮（带轮毂），前轮单独记录用于转向 ----
+  // ---- 车轮（轮胎 + 轮毂 + 辐条），前轮用于转向 ----
   const tireMat = new THREE.MeshStandardMaterial({ color: 0x0b0d12, roughness: 0.95 });
-  const hubMat = accentMat;
   [[-0.65, 0.52], [0.65, 0.52], [-0.65, -0.52], [0.65, -0.52]].forEach(([x, z], idx) => {
     const w = new THREE.Group();
-    const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.2, 22), tireMat);
+    const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.2, 24), tireMat);
     tire.rotation.z = Math.PI / 2;
-    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.22, 8), hubMat);
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.22, 8), accentMat);
     hub.rotation.z = Math.PI / 2;
+    // 辐条
+    for (let s = 0; s < 4; s++) {
+      const sp = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.02, 0.21), accentMat);
+      sp.rotation.z = (s * Math.PI) / 4 + Math.PI / 4;
+      w.add(sp);
+    }
     w.add(tire, hub);
     w.position.set(x, 0.3, z);
     wheels.push(w);
@@ -131,37 +177,36 @@ function buildCar() {
 
   // ---- 前灯 ----
   headlightMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0 });
-  [[0.55, 0.5, 0.43], [-0.55, 0.5, 0.43]].forEach(([x, y, z]) => {
-    const l = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.15, 0.05), headlightMat);
+  [[0.55, 0.52, 0.44], [-0.55, 0.52, 0.44]].forEach(([x, y, z]) => {
+    const l = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.14, 0.04), headlightMat);
     l.position.set(x, y, z);
     carGroup.add(l);
   });
 
   // ---- 刹车灯 ----
   brakeMat = new THREE.MeshStandardMaterial({ color: 0xff2020, emissive: 0xff2020, emissiveIntensity: 0 });
-  const brakeBar = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.13, 0.05), brakeMat);
-  brakeBar.position.set(0, 0.6, -0.46);
+  const brakeBar = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.12, 0.04), brakeMat);
+  brakeBar.position.set(0, 0.62, -0.44);
   carGroup.add(brakeBar);
 
   // ---- 灯带 ----
   stripMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0 });
-  [[0.79, 0], [-0.79, 0]].forEach(([x, z]) => {
-    const s = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.05, 0.95), stripMat);
-    s.position.set(x, 0.46, z);
+  [[0.8, 0], [-0.8, 0]].forEach(([x, z]) => {
+    const s = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.05, 0.9), stripMat);
+    s.position.set(x, 0.47, z);
     carGroup.add(s);
   });
 
-  // ---- 转向灯（前轮上方，黄色）----
+  // ---- 转向灯 ----
   turnLMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0xffaa00, emissiveIntensity: 0 });
   turnRMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0xffaa00, emissiveIntensity: 0 });
-  const turnL = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.1, 0.05), turnLMat);
-  turnL.position.set(0.7, 0.5, 0.43);
-  const turnR = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.1, 0.05), turnRMat);
-  turnR.position.set(-0.7, 0.5, 0.43);
-  carGroup.add(turnL, turnR);
+  const tl = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.1, 0.04), turnLMat);
+  tl.position.set(0.7, 0.52, 0.44);
+  const tr = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.1, 0.04), turnRMat);
+  tr.position.set(-0.7, 0.52, 0.44);
+  carGroup.add(tl, tr);
 
-  carGroup.add(under, chassis, main, nose1, nose2, wing, rollbar, exhaust,
-               seat, seatBack, headrest, steer, ...wheels);
+  carGroup.add(chassis, body, wing, ...wheels);
   carGroup.position.y = 0.15;
   scene.add(carGroup);
 }
@@ -173,38 +218,21 @@ function updateVisuals() {
   headLamp.intensity = car.light ? 1.6 : 0;
   brakeMat.emissiveIntensity = braking ? 1.6 : 0;
   stripMat.emissiveIntensity = car.strip ? 1.2 : 0;
-  if (car.strip) {
-    const hue = (Date.now() / 200) % 360;
-    stripMat.emissive.setHSL(hue / 360, 1, 0.5);
-  }
-  // 转向灯闪烁
+  if (car.strip) stripMat.emissive.setHSL(((Date.now() / 200) % 360) / 360, 1, 0.5);
   const blink = Math.floor(Date.now() / 250) % 2 === 0;
-  turnLMat.emissiveIntensity = (car.turn === "L" && blink) ? 1.4 : 0;
-  turnRMat.emissiveIntensity = (car.turn === "R" && blink) ? 1.4 : 0;
+  turnLMat.emissiveIntensity = car.turn === "L" && blink ? 1.4 : 0;
+  turnRMat.emissiveIntensity = car.turn === "R" && blink ? 1.4 : 0;
 }
 
-// ================= 车运动（原地模拟） =================
+// ================= 车动画（基于后端状态） =================
 function updateCar(dt) {
-  const max = GEAR_MAX[car.gear];
-  if (car.ebrk) car.speed *= 0.9;
-  else if (car.brake > 10) car.speed *= Math.max(0, 1 - 2.5 * dt);
-  else {
-    const target = (car.throttle / 100) * max;
-    car.speed += (target - car.speed) * Math.min(1, dt * 2.5);
-  }
-  car.speed = Math.max(0, Math.min(max, car.speed));
-
-  // 原地模拟：轮子转 + 行驶震动 + 起伏（车不平移）
-  wheels.forEach(w => (w.rotation.x += car.speed * dt * 3.2));
   const t = Date.now() / 1000;
+  wheels.forEach(w => (w.rotation.x += car.speed * dt * 3.2));
   carGroup.position.y = 0.15 + Math.sin(t * 30) * car.speed * 0.0022;
   carGroup.rotation.z = Math.sin(t * 18) * car.speed * 0.0016;
   carGroup.rotation.x = Math.sin(t * 26) * car.speed * 0.0009;
-
-  // 转向：车身偏转 + 前轮转向
   carGroup.rotation.y = car.steer * 0.45;
   frontWheels.forEach(w => (w.rotation.y = car.steer * 0.6));
-
   updateVisuals();
 }
 
@@ -224,12 +252,12 @@ function initAudio() {
 
     osc1 = actx.createOscillator();
     osc1.type = "sawtooth";
-    osc1.frequency.value = 40;
+    osc1.frequency.value = 45;
     osc1.connect(engFilter);
     osc1.start();
     osc2 = actx.createOscillator();
     osc2.type = "square";
-    osc2.frequency.value = 20;
+    osc2.frequency.value = 22;
     osc2.connect(engFilter);
     osc2.start();
 
@@ -248,7 +276,6 @@ function initAudio() {
     noise.connect(nf); nf.connect(noiseGain); noiseGain.connect(engGain);
     noise.start();
 
-    // 喇叭（双音鸣笛）
     hornGain = actx.createGain();
     hornGain.gain.value = 0;
     hornGain.connect(actx.destination);
@@ -271,60 +298,80 @@ function updateEngine() {
   osc1.frequency.value = rpm;
   osc2.frequency.value = rpm * 0.5;
   engFilter.frequency.value = 350 + t * 1600;
-  const vol = car.mute || car.ebrk ? 0 : 0.04 + t * 0.24;
+  const vol = car.mute || car.ebrk ? 0 : 0.07 + t * 0.26;
   engGain.gain.value += (vol - engGain.gain.value) * 0.08;
   noiseGain.gain.value = t * 0.07;
-  // 喇叭
   hornGain.gain.value = car.horn && !car.mute ? 0.09 : 0;
 }
 
-// ================= HUD 交互 =================
+// ================= HUD 同步 =================
+function updateHUD() {
+  document.querySelectorAll(".ctrl[data-key]").forEach(b => {
+    b.classList.toggle("on", !!car[b.dataset.key]);
+  });
+  document.querySelectorAll(".gear").forEach(b => {
+    b.classList.toggle("active", +b.dataset.g === car.gear);
+  });
+  document.getElementById("gear-label").textContent = "档位 " + car.gear;
+  document.getElementById("speed-num").textContent = Math.round(car.speed);
+  ["throttle", "brake"].forEach(id => {
+    const el = document.getElementById(id);
+    el.style.setProperty("--pedal", car[id] + "%");
+    el.querySelector(".p-val").textContent = Math.round(car[id]) + "%";
+  });
+  const wheelEl = document.getElementById("wheel");
+  wheelEl.style.transform = `rotate(${(car.steer * 90).toFixed(0)}deg)`;
+  document.getElementById("steer-val").textContent = Math.round(car.steer * 90) + "°";
+  const sb = document.getElementById("status-brain");
+  sb.textContent = car.online ? "大脑 ● 在线 · 小脑在线" : "大脑 ● 连接中";
+  sb.style.color = car.online ? "var(--green)" : "var(--yellow)";
+}
+
 function log(msg) {
   const el = document.getElementById("log");
   el.innerHTML = msg + "<br>" + el.innerHTML;
   if (el.children.length > 6) el.removeChild(el.lastChild);
 }
 
+// ================= 交互（全部发往后端） =================
 function bindControls() {
+  // 中控按钮（喇叭单独按住处理）
   document.querySelectorAll(".ctrl[data-key]").forEach(btn => {
+    if (btn.dataset.key === "horn") {
+      btn.addEventListener("mousedown", () => send({ type: "horn", value: true }));
+      btn.addEventListener("mouseup", () => send({ type: "horn", value: false }));
+      btn.addEventListener("mouseleave", () => send({ type: "horn", value: false }));
+      btn.addEventListener("touchstart", e => { e.preventDefault(); send({ type: "horn", value: true }); });
+      btn.addEventListener("touchend", () => send({ type: "horn", value: false }));
+      return;
+    }
     btn.addEventListener("click", () => {
-      const k = btn.dataset.key;
-      car[k] = !car[k];
-      btn.classList.toggle("on", car[k]);
-      const names = { light: "大灯", mute: "静音", strip: "灯带", horn: "喇叭", ebrk: "急刹" };
-      log(`${names[k]} -> ${car[k] ? "开" : "关"}`);
-      if (k === "ebrk" && car[k]) {
-        log("⚠️ 急刹触发！");
-        setTimeout(() => { car.ebrk = false; btn.classList.remove("on"); }, 1200);
-      }
+      send({ type: "btn", name: BTN_NAMES[btn.dataset.key] });
+      if (btn.dataset.key === "ebrk") log("⚠️ 急刹请求已发送");
     });
   });
 
   document.querySelectorAll(".gear").forEach(b => {
     b.addEventListener("click", () => {
-      car.gear = +b.dataset.g;
-      document.querySelectorAll(".gear").forEach(x => x.classList.toggle("active", x === b));
-      document.getElementById("gear-label").textContent = `档位 ${car.gear}`;
-      log(`换档 -> ${car.gear} 档`);
+      send({ type: "gear", value: +b.dataset.g });
+      log(`换档 -> ${b.dataset.g} 档`);
     });
   });
 
+  // 语音
   document.getElementById("btn-voice").addEventListener("click", () => {
-    car.light = !car.light;
-    document.querySelector('.ctrl[data-key="light"]').classList.toggle("on", car.light);
+    send({ type: "voice" });
     document.getElementById("btn-voice").classList.add("flash");
     setTimeout(() => document.getElementById("btn-voice").classList.remove("flash"), 800);
-    log("[语音] 识别: 干杯出来开灯");
   });
 
+  // 踏板
   ["throttle", "brake"].forEach(id => {
     const el = document.getElementById(id);
     const apply = clientY => {
       const r = el.getBoundingClientRect();
       const v = Math.max(0, Math.min(100, Math.round((r.bottom - clientY) / r.height * 100)));
-      car[id] = v;
-      el.style.setProperty("--pedal", v + "%");
-      el.querySelector(".p-val").textContent = v + "%";
+      send({ type: id, value: v });
     };
     const down = e => { el._drag = true; apply(e.clientY); };
     const move = e => { if (el._drag) apply(e.clientY); };
@@ -337,7 +384,7 @@ function bindControls() {
     window.addEventListener("touchend", up);
   });
 
-  // 方向盘：水平拖动转向
+  // 方向盘
   const wheelEl = document.getElementById("wheel");
   let steerDrag = false, steerLast = 0;
   wheelEl.addEventListener("mousedown", e => { steerDrag = true; steerLast = e.clientX; });
@@ -349,16 +396,16 @@ function bindControls() {
     const x = e.clientX !== undefined ? e.clientX : e.touches[0].clientX;
     const dx = x - steerLast;
     steerLast = x;
-    car.steer = Math.max(-1, Math.min(1, car.steer + dx * 0.035));
-    wheelEl.style.transform = `rotate(${(car.steer * 90).toFixed(0)}deg)`;
-    document.getElementById("steer-val").textContent = `${Math.round(car.steer * 90)}°`;
-    car.turn = car.steer < -0.25 ? "L" : car.steer > 0.25 ? "R" : "off";
+    const s = Math.max(-1, Math.min(1, car.steer + dx * 0.035));
+    send({ type: "steer", value: s });
   };
   window.addEventListener("mousemove", steerMove);
   window.addEventListener("touchmove", e => { if (steerDrag) { e.preventDefault(); steerMove(e.touches[0]); } }, { passive: false });
 
-  document.body.addEventListener("click", () => initAudio());
-  document.body.addEventListener("touchstart", () => initAudio());
+  // 音频：第一次点击启用
+  document.body.addEventListener("click", () => initAudio(), { capture: true });
+  document.body.addEventListener("touchstart", () => initAudio(), { capture: true });
+  log("👆 点击画面任意处启用声音");
 }
 
 // ================= 真实摄像头 =================
@@ -398,7 +445,6 @@ function initTalk() {
   const btn = document.getElementById("talk-btn");
   const status = document.getElementById("talk-status");
   let recorder = null, chunks = [];
-
   const startRec = async () => {
     chunks = [];
     try {
@@ -423,13 +469,11 @@ function initTalk() {
     }
   };
   const stopRec = () => { if (recorder && recorder.state === "recording") recorder.stop(); };
-
   btn.addEventListener("mousedown", startRec);
   btn.addEventListener("mouseup", stopRec);
   btn.addEventListener("mouseleave", stopRec);
   btn.addEventListener("touchstart", e => { e.preventDefault(); startRec(); });
   btn.addEventListener("touchend", stopRec);
-
   document.getElementById("parent-btn").addEventListener("click", () => {
     status.textContent = "家长发来语音";
     log("家长: 发来一条语音");
@@ -479,7 +523,6 @@ setInterval(() => {
   document.getElementById("d-temp").textContent = Math.round(32 + car.speed * 0.2);
   document.getElementById("d-amp").textContent = (car.throttle * 0.05).toFixed(1);
   document.getElementById("d-state").textContent = car.speed > 0 ? "行驶中" : "静止";
-  document.getElementById("speed-num").textContent = Math.round(car.speed);
 }, 100);
 
 // ================= 启动 =================
@@ -491,5 +534,5 @@ initCamera();
 initTalk();
 updateOrbit();
 animate();
-log("干杯一号 数字孪生已启动");
-log("点画面启用声音 · 拖拽旋转视角 · 拖动方向盘转向");
+connect();
+log("干杯一号 数字孪生启动，正在连接大脑+小脑…");

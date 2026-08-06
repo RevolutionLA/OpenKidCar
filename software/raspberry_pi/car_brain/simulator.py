@@ -112,6 +112,7 @@ class CerebellumSim:
         self.voltage = 24.6
         self.temp = 32
         self.current = 0.0
+        self.steer = 0.0          # 转向 -1..1（方向盘传感）
         self._ready = False
 
     def press_button(self, name):
@@ -122,6 +123,12 @@ class CerebellumSim:
 
     def set_brake(self, v):
         self.brake = max(0, min(100, int(v)))
+
+    def set_steer(self, v):
+        self.steer = max(-1.0, min(1.0, float(v)))
+
+    def set_horn(self, on):
+        self.horn = bool(on)
 
     def tick(self):
         if not self._ready:
