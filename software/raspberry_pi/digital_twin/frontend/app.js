@@ -213,7 +213,9 @@ function buildProceduralKart() {
   log("已显示卡丁车");
 }
 
-const MODEL_CONFIG = {};
+const MODEL_CONFIG = {
+  car: { rotX: Math.PI / 2 },   // Khronos CarConcept：车头 -Y，转 90° 归一化到 -Z
+};
 
 function loadModel(name) {
   if (currentModel) carGroup.remove(currentModel);
@@ -225,10 +227,14 @@ function loadModel(name) {
     gltf => {
       const model = gltf.scene;
       const cfg = MODEL_CONFIG[name] || {};
-      // 若长轴是 Y（竖直摆放），先躺平到 Z 方向
-      const box0 = new THREE.Box3().setFromObject(model);
-      const s0 = box0.getSize(new THREE.Vector3());
-      if (s0.y > s0.x && s0.y > s0.z) model.rotation.x = -Math.PI / 2;
+      // 方向归一化：优先用模型配置，否则长轴是 Y 时躺平到 Z
+      if (cfg.rotX !== undefined) {
+        model.rotation.x = cfg.rotX;
+      } else {
+        const box0 = new THREE.Box3().setFromObject(model);
+        const s0 = box0.getSize(new THREE.Vector3());
+        if (s0.y > s0.x && s0.y > s0.z) model.rotation.x = -Math.PI / 2;
+      }
       // 统一适配：最长边 = 2.2，贴地
       const box = new THREE.Box3().setFromObject(model);
       const size = box.getSize(new THREE.Vector3());
@@ -243,11 +249,13 @@ function loadModel(name) {
         if (o.isMesh) {
           o.castShadow = true;
           const n = o.name.toLowerCase();
-          if (n.startsWith("wheel_")) wheelNodes.push(o);
+          // 精确匹配 WheelFrontL/R、WheelRearL/R（排除 Rim/Disc/Pad/方向盘）
+          if (/^wheel(front|rear)[lr]$/.test(n)) {
+            wheelNodes.push(o);
+            if (n.includes("front")) frontWheels.push(o);
+          }
         }
       });
-      // 前轮（局部 z < 0 = 车头 -Z）
-      wheelNodes.forEach(w => { if (w.position.z < 0) frontWheels.push(w); });
       carGroup.add(model);
       currentModel = model;
       currentModelName = name;
@@ -588,7 +596,7 @@ initScene();
 carGroup = new THREE.Group();
 buildLights();
 scene.add(carGroup);
-buildProceduralKart();
+loadModel("car");
 bindControls();
 bindOrbit();
 initCamera();
