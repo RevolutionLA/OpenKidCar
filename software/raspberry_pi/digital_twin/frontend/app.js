@@ -52,27 +52,27 @@ function initScene() {
   renderer.shadowMap.enabled = true;
   document.getElementById("scene").appendChild(renderer.domElement);
 
-  scene.add(new THREE.AmbientLight(0x3a4a5c, 0.6));
-  const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+  scene.add(new THREE.AmbientLight(0x99aac8, 0.9));
+  const dir = new THREE.DirectionalLight(0xffffff, 1.4);
   dir.position.set(6, 9, 5);
   dir.castShadow = true;
   scene.add(dir);
-  const rim = new THREE.DirectionalLight(0x22d3ee, 0.3);
+  const rim = new THREE.DirectionalLight(0x22d3ee, 0.5);
   rim.position.set(-5, 3, -4);
   scene.add(rim);
 
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(80, 80),
-    new THREE.MeshStandardMaterial({ color: 0x0a1018, roughness: 0.95 })
+    new THREE.MeshStandardMaterial({ color: 0x141c28, roughness: 0.9 })
   );
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = true;
   scene.add(ground);
-  scene.add(new THREE.GridHelper(80, 40, 0x1a2a3a, 0x12202e));
+  scene.add(new THREE.GridHelper(80, 40, 0x2a3a50, 0x1a2838));
 
   // 地面反光点（氛围）
-  const glowLight = new THREE.PointLight(0x22d3ee, 0.5, 12);
-  glowLight.position.set(0, 1.6, 0);
+  const glowLight = new THREE.PointLight(0x22d3ee, 0.8, 14);
+  glowLight.position.set(0, 1.8, 0);
   scene.add(glowLight);
 
   headLamp = new THREE.SpotLight(0xffffff, 0, 25, Math.PI / 5, 0.4);
@@ -130,9 +130,9 @@ let currentModel = null, currentModelName = null;
 // 程序化卡丁车（可靠默认；车头朝 -Z，灯光/轮子方向正确）
 function buildProceduralKart() {
   currentModel = new THREE.Group();
-  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1e4fd8, metalness: 0.6, roughness: 0.3 });
-  const darkMat = new THREE.MeshStandardMaterial({ color: 0x161c26, metalness: 0.5, roughness: 0.6 });
-  const accentMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, metalness: 0.75, roughness: 0.2 });
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x3d6bff, metalness: 0.5, roughness: 0.25 });
+  const darkMat = new THREE.MeshStandardMaterial({ color: 0x1a2230, metalness: 0.5, roughness: 0.6 });
+  const accentMat = new THREE.MeshStandardMaterial({ color: 0xffc422, metalness: 0.8, roughness: 0.2 });
   const glassMat = new THREE.MeshPhysicalMaterial({
     color: 0x9fd8ff, transparent: true, opacity: 0.4, roughness: 0.05, metalness: 0.1,
   });
@@ -532,7 +532,7 @@ function initTalk() {
 // ================= 视角轨道 =================
 let yaw = 0.6, pitch = 0.42, orbitDrag = false, lastMX = 0, lastMY = 0;
 function updateOrbit() {
-  const r = 6.8;
+  const r = 4.4;
   camera.position.set(
     r * Math.cos(pitch) * Math.sin(yaw),
     r * Math.sin(pitch) + 0.9,
