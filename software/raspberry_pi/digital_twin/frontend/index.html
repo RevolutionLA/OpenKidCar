@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>干杯一号 · 数字孪生驾驶舱</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Three.js 3D 场景 -->
+  <div id="scene"></div>
+
+  <!-- 顶部标题栏 -->
+  <header id="hud-top">
+    <div class="title">干杯一号 · <span class="accent">数字孪生</span></div>
+    <div class="sub">GANBEI NO.1 DIGITAL TWIN</div>
+    <div id="status-brain">大脑 ● 连接中</div>
+  </header>
+
+  <!-- 中控台按钮 -->
+  <div id="controls" class="hud-panel">
+    <button class="ctrl" data-key="light">💡 大灯</button>
+    <button class="ctrl" data-key="mute">🔇 静音</button>
+    <button class="ctrl" data-key="strip">🌈 灯带</button>
+    <button class="ctrl" data-key="horn">📢 喇叭</button>
+    <button class="ctrl danger" data-key="ebrk">🛑 急刹</button>
+    <div id="gears">
+      <button class="gear active" data-g="1">1档</button>
+      <button class="gear" data-g="2">2档</button>
+      <button class="gear" data-g="3">3档</button>
+      <button class="gear" data-g="4">4档</button>
+    </div>
+    <button class="ctrl" id="btn-voice">🎙️ 语音</button>
+  </div>
+
+  <!-- 速度表 -->
+  <div id="speedometer" class="hud-panel">
+    <div class="ring"><div class="ring-mask"></div></div>
+    <div id="speed-num">0</div>
+    <div id="speed-unit">km/h</div>
+    <div id="gear-label">档位 2</div>
+  </div>
+
+  <!-- 踏板 -->
+  <div id="pedals">
+    <div class="pedal" id="throttle"><span class="p-label">油门</span><span class="p-val">0%</span></div>
+    <div class="pedal brake" id="brake"><span class="p-label">刹车</span><span class="p-val">0%</span></div>
+  </div>
+
+  <!-- 摄像头（真实 PC 摄像头） -->
+  <div id="camera-box" class="hud-panel">
+    <video id="cam" autoplay playsinline muted></video>
+    <div class="cam-rect" id="cam-rec">● REC</div>
+    <button class="mini" id="cam-flip">⇄ 翻转</button>
+    <div class="cam-mode" id="cam-mode">前视 · 行车记录</div>
+  </div>
+
+  <!-- 对讲机 -->
+  <div id="talk-box" class="hud-panel">
+    <div class="talk-title">对讲机</div>
+    <div id="talk-status">待机</div>
+    <button class="talk" id="talk-btn">🔴 按住说话(孩子)</button>
+    <button class="talk alt" id="parent-btn">👨 家长语音</button>
+  </div>
+
+  <!-- 车辆数据 -->
+  <div id="data" class="hud-panel">
+    <span><b id="d-volt">24.6</b>V</span>
+    <span><b id="d-temp">32</b>℃</span>
+    <span><b id="d-amp">0.0</b>A</span>
+    <span id="d-state">静止</span>
+  </div>
+
+  <!-- 事件日志 -->
+  <div id="log" class="hud-panel"></div>
+
+  <!-- 操作提示 -->
+  <div id="tip">拖拽旋转视角 · 点击按钮/拖动踏板 · 首次请点画面任意处启用声音</div>
+
+  <script src="vendor/three.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
