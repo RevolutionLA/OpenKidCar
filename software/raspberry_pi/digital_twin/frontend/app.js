@@ -214,9 +214,10 @@ function buildProceduralKart() {
 }
 
 const MODEL_CONFIG = {
-  // Khronos CarConcept：车头 -Y；rotateX(+90°) 使 -Y→-Z，再 rotateY(+90°) 使 -Z→-X
-  // （方法调用顺序绝对明确，不用 Euler order 猜）→ 车头朝屏幕左，横着
-  car: { rotX: Math.PI / 2, rotY: Math.PI / 2 },
+  // Khronos CarConcept：只需绕 Z 转 +90°。
+  //  车长 Y→X（横着）、车宽 X→Y（轮子轴转到垂直左右→正常立着）、车高 Z→不变
+  //  车头 -Y → +X（朝屏幕右）。若想朝左，改 rotZ 为 -PI/2。
+  car: { rotZ: Math.PI / 2 },
 };
 
 function loadModel(name) {
@@ -229,10 +230,11 @@ function loadModel(name) {
     gltf => {
       const model = gltf.scene;
       const cfg = MODEL_CONFIG[name] || {};
-      // 方向归一化：优先用模型配置（rotateX 再 rotateY，顺序明确），否则长轴是 Y 时躺平
-      if (cfg.rotX !== undefined) {
-        model.rotateX(cfg.rotX || 0);
+      // 方向归一化：优先用模型配置（rotateX/Y/Z 顺序明确），否则长轴是 Y 时躺平
+      if (cfg.rotX !== undefined || cfg.rotY !== undefined || cfg.rotZ !== undefined) {
+        if (cfg.rotX) model.rotateX(cfg.rotX);
         if (cfg.rotY) model.rotateY(cfg.rotY);
+        if (cfg.rotZ) model.rotateZ(cfg.rotZ);
       } else {
         const box0 = new THREE.Box3().setFromObject(model);
         const s0 = box0.getSize(new THREE.Vector3());
