@@ -366,7 +366,7 @@ function updateEngine() {
   osc1.frequency.value = rpm;
   osc2.frequency.value = rpm * 0.5;
   engFilter.frequency.value = 350 + t * 1600;
-  const vol = car.mute || car.ebrk ? 0 : 0.07 + t * 0.26;
+  const vol = car.mute || car.ebrk ? 0 : t * 0.3;   // 油门 0 → 无声
   engGain.gain.value += (vol - engGain.gain.value) * 0.08;
   noiseGain.gain.value = t * 0.07;
   hornGain.gain.value = car.horn && !car.mute ? 0.09 : 0;
@@ -387,8 +387,8 @@ function updateHUD() {
     el.style.setProperty("--pedal", car[id] + "%");
     el.querySelector(".p-val").textContent = Math.round(car[id]) + "%";
   });
-  const wheelEl = document.getElementById("wheel");
-  wheelEl.style.transform = `rotate(${(car.steer * 90).toFixed(0)}deg)`;
+  const knob = document.getElementById("steer-knob");
+  if (knob) knob.style.left = `calc(${(car.steer * 0.5 + 0.5) * 100}% - 8px)`;
   document.getElementById("steer-val").textContent = Math.round(car.steer * 90) + "°";
   const sb = document.getElementById("status-brain");
   sb.textContent = car.online ? "大脑 ● 在线 · 小脑在线" : "大脑 ● 连接中";
@@ -452,20 +452,25 @@ function bindControls() {
     window.addEventListener("touchend", up);
   });
 
-  // 方向盘
-  const wheelEl = document.getElementById("wheel");
-  let steerDrag = false, steerLast = 0;
-  wheelEl.addEventListener("mousedown", e => { steerDrag = true; steerLast = e.clientX; });
-  wheelEl.addEventListener("touchstart", e => { steerDrag = true; steerLast = e.touches[0].clientX; e.preventDefault(); });
+  // 转向手柄：水平拖动把手转向（卡丁车式）
+  const steerHandle = document.getElementById("steer-handle");
+  const steerKnob = document.getElementById("steer-knob");
+  let steerDrag = false;
+  const setSteer = clientX => {
+    const r = steerHandle.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+    const s = (ratio - 0.5) * 2;   // -1..1
+    steerKnob.style.left = `calc(${ratio * 100}% - 8px)`;
+    document.getElementById("steer-val").textContent = Math.round(s * 90) + "°";
+    send({ type: "steer", value: s });
+  };
+  steerHandle.addEventListener("mousedown", e => { steerDrag = true; setSteer(e.clientX); });
+  steerHandle.addEventListener("touchstart", e => { steerDrag = true; setSteer(e.touches[0].clientX); e.preventDefault(); });
   window.addEventListener("mouseup", () => { steerDrag = false; });
   window.addEventListener("touchend", () => { steerDrag = false; });
   const steerMove = e => {
     if (!steerDrag) return;
-    const x = e.clientX !== undefined ? e.clientX : e.touches[0].clientX;
-    const dx = x - steerLast;
-    steerLast = x;
-    const s = Math.max(-1, Math.min(1, car.steer + dx * 0.035));
-    send({ type: "steer", value: s });
+    setSteer(e.clientX !== undefined ? e.clientX : e.touches[0].clientX);
   };
   window.addEventListener("mousemove", steerMove);
   window.addEventListener("touchmove", e => { if (steerDrag) { e.preventDefault(); steerMove(e.touches[0]); } }, { passive: false });
@@ -543,11 +548,38 @@ function initTalk() {
   btn.addEventListener("mouseleave", stopRec);
   btn.addEventListener("touchstart", e => { e.preventDefault(); startRec(); });
   btn.addEventListener("touchend", stopRec);
-  document.getElementById("parent-btn").addEventListener("click", () => {
-    status.textContent = "家长发来语音";
-    log("家长: 发来一条语音");
-    speak("宝宝，注意安全，爸爸在看着你");
-  });
+  // 家长按住说话（真实录音，松开回放给孩子）
+  const pbtn = document.getElementById("parent-btn");
+  let parentRec = null, parentChunks = [];
+  const startParent = async () => {
+    parentChunks = [];
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      parentRec = new MediaRecorder(stream);
+      parentRec.ondataavailable = e => parentChunks.push(e.data);
+      parentRec.onstop = () => {
+        const blob = new Blob(parentChunks, { type: parentRec.mimeType || "audio/webm" });
+        const a = new Audio(URL.createObjectURL(blob));
+        a.play();
+        status.textContent = "已发送给孩子 ✓";
+        log("家长: 对讲语音已发送");
+        stream.getTracks().forEach(t => t.stop());
+        parentRec = null;
+      };
+      parentRec.start();
+      status.textContent = "家长说话中…";
+      log("家长: 按住说话中…");
+    } catch (e) {
+      status.textContent = "麦克风不可用";
+      log("[对讲] 麦克风不可用: " + e.message);
+    }
+  };
+  const stopParent = () => { if (parentRec && parentRec.state === "recording") parentRec.stop(); };
+  pbtn.addEventListener("mousedown", startParent);
+  pbtn.addEventListener("mouseup", stopParent);
+  pbtn.addEventListener("mouseleave", stopParent);
+  pbtn.addEventListener("touchstart", e => { e.preventDefault(); startParent(); });
+  pbtn.addEventListener("touchend", stopParent);
 }
 
 // ================= 视角轨道 =================

@@ -121,8 +121,8 @@ body {
   cursor: pointer;
   overflow: hidden;
 }
-#throttle { left: 20px; top: 460px; }
-#brake { left: 168px; top: 460px; }
+#throttle { left: 20px; top: 392px; }
+#brake { left: 168px; top: 392px; }
 .pedal .p-label { font-size: 15px; color: var(--text); letter-spacing: 2px; z-index: 2; }
 .pedal .p-val { font-size: 20px; font-weight: 700; z-index: 2; margin-top: 4px; }
 #throttle .p-val { color: var(--green); }
@@ -149,7 +149,7 @@ body {
 #cam-flip:hover { border-color: var(--cyan); }
 
 /* ============ 对讲机 ============ */
-#talk-box { right: 20px; top: 300px; z-index: 10; width: 300px; padding: 14px; }
+#talk-box { right: 20px; top: 176px; z-index: 10; width: 300px; padding: 14px; }
 .talk-title { color: var(--dim); font-size: 11px; letter-spacing: 2px; margin-bottom: 6px; }
 #talk-status { font-size: 13px; color: var(--text); margin-bottom: 10px; min-height: 18px; }
 .talk { width: 100%; height: 42px; border-radius: 10px; border: 1px solid var(--panel-border);
@@ -159,25 +159,20 @@ body {
 .talk.alt { background: linear-gradient(180deg, rgba(60,50,90,0.6), rgba(30,25,50,0.6));
   border-color: rgba(150,120,255,0.4); margin-bottom: 0; }
 
-/* ============ 方向盘 ============ */
-#steering { left: 20px; top: 284px; z-index: 10; width: 150px; height: 158px;
-  padding: 10px; text-align: center; }
-.steer-title { color: var(--dim); font-size: 11px; letter-spacing: 2px; }
-#wheel { width: 104px; height: 104px; border-radius: 50%;
-  border: 7px solid #2a3a52; position: relative; margin: 10px auto 6px;
-  background: radial-gradient(circle, #141a26, #1c2434);
-  box-shadow: 0 0 18px rgba(34,211,238,0.15), inset 0 0 12px rgba(0,0,0,0.6);
-  transition: transform .05s linear; }
-.spoke { position: absolute; top: 50%; left: 50%; width: 104px; height: 6px;
-  background: linear-gradient(90deg, #3b82f6, #22d3ee); border-radius: 3px;
-  box-shadow: 0 0 8px rgba(59,130,246,0.5); }
-.s1 { transform: translate(-50%,-50%); }
-.s2 { transform: translate(-50%,-50%) rotate(60deg); }
-.s3 { transform: translate(-50%,-50%) rotate(120deg); }
-.hub { position: absolute; top: 50%; left: 50%; width: 24px; height: 24px;
-  transform: translate(-50%,-50%); border-radius: 50%; background: #3b82f6;
-  box-shadow: 0 0 14px rgba(59,130,246,0.8); }
-#steer-val { color: var(--cyan); font-size: 13px; letter-spacing: 1px; }
+/* ============ 转向手柄（卡丁车式） ============ */
+#steering { left: 20px; top: 176px; z-index: 10; width: 190px; height: 120px;
+  padding: 12px; text-align: center; }
+.steer-title { color: var(--dim); font-size: 11px; letter-spacing: 2px; margin-bottom: 10px; }
+#steer-handle { position: relative; width: 100%; height: 48px; border-radius: 12px;
+  background: linear-gradient(180deg, rgba(40,60,80,0.7), rgba(20,30,44,0.7));
+  border: 1px solid var(--panel-border); cursor: grab; overflow: hidden; }
+#steer-handle:active { cursor: grabbing; }
+.handle-line { position: absolute; left: 8px; right: 8px; top: 50%; height: 2px;
+  background: rgba(34,211,238,0.35); border-radius: 2px; }
+.handle-knob { position: absolute; top: 7px; left: calc(50% - 8px); width: 16px; height: 34px;
+  border-radius: 8px; background: linear-gradient(180deg, #22d3ee, #3b82f6);
+  box-shadow: 0 0 12px rgba(34,211,238,0.6); transition: left .05s linear; }
+#steer-val { color: var(--cyan); font-size: 13px; margin-top: 8px; letter-spacing: 1px; }
 
 /* ============ 数据 ============ */
 #data { left: 50%; transform: translateX(-50%); top: 168px; z-index: 10;
@@ -187,7 +182,7 @@ body {
 #d-state { margin-left: auto; color: var(--cyan); }
 
 /* ============ 日志 ============ */
-#log { right: 20px; top: 540px; z-index: 10; width: 300px; padding: 12px 16px;
+#log { right: 20px; top: 396px; z-index: 10; width: 300px; padding: 12px 16px;
   min-height: 88px; font-size: 12px; color: var(--dim); line-height: 1.7; }
 
 /* ============ 提示 ============ */
