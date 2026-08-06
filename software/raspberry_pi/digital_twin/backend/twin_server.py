@@ -187,8 +187,16 @@ async def pump_loop(app):
         await asyncio.sleep(0.02)
 
 
+@web.middleware
+async def no_cache(request, handler):
+    """强制不缓存，确保浏览器刷新总是加载最新前端代码。"""
+    resp = await handler(request)
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
 def build_app():
-    app = web.Application()
+    app = web.Application(middlewares=[no_cache])
     app.router.add_get("/", index)
     app.router.add_get("/ws", ws_handler)
     app.router.add_static("/vendor", os.path.join(FRONTEND, "vendor"))
