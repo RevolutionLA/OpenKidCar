@@ -182,7 +182,15 @@ class CerebellumSim:
         self.link.send(C.ACK, "OK")
 
     def _report(self):
-        self.speed = self.throttle * GEAR_SPEED_MAX.get(self.gear, 10) * 70 // 10000
+        # 速度物理（积分式）：油门加速逼近目标，刹车/急刹减速
+        max_spd = GEAR_SPEED_MAX.get(self.gear, 10)
+        if self.ebrk or self.brake > 10:
+            # 刹车越深，减速越快；急刹立即停
+            decel = 60 if self.ebrk else self.brake * 0.25
+            self.speed = max(0, self.speed - decel)
+        else:
+            target = self.throttle * max_spd / 100
+            self.speed += (target - self.speed) * 0.12   # 平滑逼近目标速度
         self.motor = 0 if (self.ebrk or self.brake > 10) else self.throttle
         self.brake_light = 255 if (self.ebrk or self.brake > 10) else 0
         self.current = self.motor * 0.05

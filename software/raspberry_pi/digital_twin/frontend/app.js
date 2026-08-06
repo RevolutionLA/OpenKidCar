@@ -94,34 +94,35 @@ let wheelNodes = [];   // 模型内 wheel_* 节点
 let lightsGroup;
 
 function buildLights() {
-  // 灯光组挂在模型上（约定：车头朝 -Z，车长适配到约 2.2）
+  // 灯光组挂在模型上。CarConcept 车头朝 +Z（数据验证 BodyHeadlights z=+2.18）
+  // 约定：前灯在 +Z（车头），刹车灯在 -Z（车尾）
   lightsGroup = new THREE.Group();
-  // 前灯
+  // 前灯（车头 +Z）
   headlightMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0 });
-  [[0.4, 0.45, -1.05], [-0.4, 0.45, -1.05]].forEach(p => {
+  [[0.4, 0.45, 1.05], [-0.4, 0.45, 1.05]].forEach(p => {
     const l = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.1, 0.04), headlightMat);
     l.position.set(...p);
     lightsGroup.add(l);
   });
-  // 刹车灯
+  // 刹车灯（车尾 -Z）
   brakeMat = new THREE.MeshStandardMaterial({ color: 0xff2020, emissive: 0xff2020, emissiveIntensity: 0 });
   const brakeBar = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.08, 0.04), brakeMat);
-  brakeBar.position.set(0, 0.45, 1.05);
+  brakeBar.position.set(0, 0.45, -1.05);
   lightsGroup.add(brakeBar);
-  // 灯带
+  // 灯带（车身两侧）
   stripMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0 });
   [[0.6, 0.28, 0], [-0.6, 0.28, 0]].forEach(p => {
     const s = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.04, 1.6), stripMat);
     s.position.set(...p);
     lightsGroup.add(s);
   });
-  // 转向灯
+  // 转向灯（车头两侧 +Z）
   turnLMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0xffaa00, emissiveIntensity: 0 });
   turnRMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0xffaa00, emissiveIntensity: 0 });
   const tl = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 0.04), turnLMat);
-  tl.position.set(0.5, 0.45, -1.05);
+  tl.position.set(0.5, 0.45, 1.05);
   const tr = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 0.04), turnRMat);
-  tr.position.set(-0.5, 0.45, -1.05);
+  tr.position.set(-0.5, 0.45, 1.05);
   lightsGroup.add(tl, tr);
 }
 
@@ -214,10 +215,8 @@ function buildProceduralKart() {
 }
 
 const MODEL_CONFIG = {
-  // 用户实测确认：X−、Y− 抵消初始旋转后方向正确 → 模型原始方向就是对的（无需旋转）
-  // noseRotY：灯光组绕 Y 转 180°。数据验证 BodyHood（引擎盖=车头）世界位置在
-  //  z=+2.38，即车头朝 +Z。把灯光组"车头 -Z"约定翻转成 +Z。
-  car: { noseRotY: Math.PI },
+  // 模型原始方向即正确；灯光已按车头 +Z 直接定位（buildLights），无需旋转
+  car: {},
 };
 
 // 让模型底部贴合地面（世界 y 最低点放到 y=0）
@@ -449,6 +448,7 @@ function bindControls() {
     const r = steerHandle.getBoundingClientRect();
     const ratio = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
     const s = (ratio - 0.5) * 2;   // -1..1
+    car.steer = s;                 // 本地即时生效，不等后端回传
     steerKnob.style.left = `calc(${ratio * 100}% - 8px)`;
     document.getElementById("steer-val").textContent = Math.round(s * 90) + "°";
     send({ type: "steer", value: s });
