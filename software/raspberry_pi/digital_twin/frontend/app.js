@@ -214,7 +214,9 @@ function buildProceduralKart() {
 }
 
 const MODEL_CONFIG = {
-  car: { rotX: Math.PI / 2 },   // Khronos CarConcept：车头 -Y，转 90° 归一化到 -Z
+  // Khronos CarConcept：车头 -Y；先绕 X 转 90°（-Y→-Z）再绕 Y 转 90°（-Z→-X）
+  // 使车长沿世界 X（屏幕左右），相机正视角看到横着的车
+  car: { rotX: Math.PI / 2, rotY: Math.PI / 2, order: "YXZ" },
 };
 
 function loadModel(name) {
@@ -227,9 +229,9 @@ function loadModel(name) {
     gltf => {
       const model = gltf.scene;
       const cfg = MODEL_CONFIG[name] || {};
-      // 方向归一化：优先用模型配置，否则长轴是 Y 时躺平到 Z
+      // 方向归一化：优先用模型配置（rotX/rotY/order），否则长轴是 Y 时躺平到 Z
       if (cfg.rotX !== undefined) {
-        model.rotation.x = cfg.rotX;
+        model.rotation.set(cfg.rotX || 0, cfg.rotY || 0, 0, cfg.order || "XYZ");
       } else {
         const box0 = new THREE.Box3().setFromObject(model);
         const s0 = box0.getSize(new THREE.Vector3());
@@ -241,7 +243,6 @@ function loadModel(name) {
       model.scale.setScalar(2.2 / Math.max(size.x, size.z));
       const b2 = new THREE.Box3().setFromObject(model);
       model.position.y = -b2.min.y;
-      model.rotation.y = cfg.rotY || 0;
       // 灯光挂在模型上（跟随翻转/缩放）
       model.add(lightsGroup);
       // 收集轮子
