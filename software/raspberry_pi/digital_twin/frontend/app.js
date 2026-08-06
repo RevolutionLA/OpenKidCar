@@ -91,58 +91,66 @@ function initScene() {
 // ================= 3D 车模（ferrari GLB + 附加灯光 mesh） =================
 let wheelNodes = [];   // 模型内 wheel_* 节点
 
+let lightsGroup;
+
 function buildLights() {
-  // 前灯（车头 -Z 方向）
+  // 灯光组挂在模型上（约定：车头朝 -Z，车长适配到约 2.2）
+  lightsGroup = new THREE.Group();
+  // 前灯
   headlightMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0 });
-  [[0.32, 0.42, -0.95], [-0.32, 0.42, -0.95]].forEach(p => {
-    const l = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.12, 0.04), headlightMat);
+  [[0.4, 0.45, -1.05], [-0.4, 0.45, -1.05]].forEach(p => {
+    const l = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.1, 0.04), headlightMat);
     l.position.set(...p);
-    carGroup.add(l);
+    lightsGroup.add(l);
   });
-  // 刹车灯（车尾 +Z）
+  // 刹车灯
   brakeMat = new THREE.MeshStandardMaterial({ color: 0xff2020, emissive: 0xff2020, emissiveIntensity: 0 });
-  const brakeBar = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.1, 0.04), brakeMat);
-  brakeBar.position.set(0, 0.42, 0.98);
-  carGroup.add(brakeBar);
-  // 灯带（车身两侧）
+  const brakeBar = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.08, 0.04), brakeMat);
+  brakeBar.position.set(0, 0.45, 1.05);
+  lightsGroup.add(brakeBar);
+  // 灯带
   stripMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0 });
-  [[0.62, 0.3, 0], [-0.62, 0.3, 0]].forEach(p => {
-    const s = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 1.4), stripMat);
+  [[0.6, 0.28, 0], [-0.6, 0.28, 0]].forEach(p => {
+    const s = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.04, 1.6), stripMat);
     s.position.set(...p);
-    carGroup.add(s);
+    lightsGroup.add(s);
   });
-  // 转向灯（车头两侧）
+  // 转向灯
   turnLMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0xffaa00, emissiveIntensity: 0 });
   turnRMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0xffaa00, emissiveIntensity: 0 });
-  const tl = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.08, 0.04), turnLMat);
-  tl.position.set(0.45, 0.42, -1.05);
-  const tr = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.08, 0.04), turnRMat);
-  tr.position.set(-0.45, 0.42, -1.05);
-  carGroup.add(tl, tr);
+  const tl = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 0.04), turnLMat);
+  tl.position.set(0.5, 0.45, -1.05);
+  const tr = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 0.04), turnRMat);
+  tr.position.set(-0.5, 0.45, -1.05);
+  lightsGroup.add(tl, tr);
 }
 
 let currentModel = null, currentModelName = null;
+const MODEL_CONFIG = {
+  ferrari: { rotY: 0 },        // three.js 模型：车头朝 -Z
+  kart: { rotY: Math.PI },     // 卡丁车车头实际朝 +Z，翻转 180° 归一到 -Z
+};
 
 function loadModel(name) {
   if (currentModel) carGroup.remove(currentModel);
-  wheelNodes.length = 0;   // 注意：frontWheels 是 const，只能清空不能重新赋值
+  wheelNodes.length = 0;   // frontWheels 是 const，只能清空
   frontWheels.length = 0;
   const loader = new THREE.GLTFLoader();
   loader.load(
     "vendor/" + name + ".glb",
     gltf => {
       const model = gltf.scene;
-      if (name === "ferrari") {
-        model.scale.setScalar(0.7);
-      } else {
-        // 卡丁车（一体模型）：按包围盒适配到约 2.2 单位长，并贴地
-        const box = new THREE.Box3().setFromObject(model);
-        const size = box.getSize(new THREE.Vector3());
-        const s = 2.2 / Math.max(size.x, size.z);
-        model.scale.setScalar(s);
-        const b2 = new THREE.Box3().setFromObject(model);
-        model.position.y = -b2.min.y;
-      }
+      const cfg = MODEL_CONFIG[name] || {};
+      // 统一适配：最长边 = 2.2，贴地
+      const box = new THREE.Box3().setFromObject(model);
+      const size = box.getSize(new THREE.Vector3());
+      model.scale.setScalar(2.2 / Math.max(size.x, size.z));
+      const b2 = new THREE.Box3().setFromObject(model);
+      model.position.y = -b2.min.y;
+      model.rotation.y = cfg.rotY || 0;
+      // 灯光挂在模型上（跟随翻转/缩放）
+      model.add(lightsGroup);
+      // 收集轮子
       model.traverse(o => {
         if (o.isMesh) {
           o.castShadow = true;
@@ -362,6 +370,15 @@ function bindControls() {
   document.getElementById("model-select").addEventListener("change", e => {
     log("切换模型 -> " + e.target.value);
     loadModel(e.target.value);
+  });
+  // 翻转朝向（灯光跟随模型一起翻转；headLamp 也同步反转）
+  document.getElementById("flip-btn").addEventListener("click", () => {
+    if (currentModel) {
+      currentModel.rotation.y += Math.PI;
+      headLamp.position.z *= -1;
+      headLamp.target.position.z *= -1;
+      log("已翻转朝向");
+    }
   });
   log("👆 点击画面任意处启用声音");
 }
