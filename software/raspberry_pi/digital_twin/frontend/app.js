@@ -215,8 +215,9 @@ function buildProceduralKart() {
 
 const MODEL_CONFIG = {
   // 用户实测确认：X−、Y− 抵消初始旋转后方向正确 → 模型原始方向就是对的（无需旋转）
-  // noseRotX：灯光组绕 X 转 -90°（CarConcept 车头在 -Y，把"车头 -Z"约定转到 -Y）
-  car: { noseRotX: -Math.PI / 2 },
+  // noseRotY：灯光组绕 Y 转 180°。数据验证 BodyHood（引擎盖=车头）世界位置在
+  //  z=+2.38，即车头朝 +Z。把灯光组"车头 -Z"约定翻转成 +Z。
+  car: { noseRotY: Math.PI },
 };
 
 // 让模型底部贴合地面（世界 y 最低点放到 y=0）
@@ -251,7 +252,8 @@ function loadModel(name) {
       const size = box.getSize(new THREE.Vector3());
       model.scale.setScalar(2.2 / Math.max(size.x, size.z));
       // 灯光挂在模型上（跟随翻转/缩放），并按车头方向旋转灯光组
-      if (cfg.noseRotX) lightsGroup.rotation.x = cfg.noseRotX;
+      if (cfg.noseRotY) lightsGroup.rotation.y = cfg.noseRotY;
+      else if (cfg.noseRotX) lightsGroup.rotation.x = cfg.noseRotX;
       model.add(lightsGroup);
       // 收集轮子
       model.traverse(o => {
