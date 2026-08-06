@@ -305,7 +305,7 @@ function updateCar(dt) {
 }
 
 // ================= 引擎声 + 喇叭（Web Audio） =================
-let actx, engGain, engFilter, osc1, osc2, noiseGain, hornGain;
+let actx, engGain, hornGain, engineSrc = null, engineBuffer = null;
 function initAudio() {
   if (actx) { actx.resume(); return; }
   try {
@@ -313,40 +313,12 @@ function initAudio() {
     engGain = actx.createGain();
     engGain.gain.value = 0;
     engGain.connect(actx.destination);
-    engFilter = actx.createBiquadFilter();
-    engFilter.type = "lowpass";
-    engFilter.frequency.value = 500;
-    engFilter.connect(engGain);
-
-    osc1 = actx.createOscillator();
-    osc1.type = "sawtooth";
-    osc1.frequency.value = 45;
-    osc1.connect(engFilter);
-    osc1.start();
-    osc2 = actx.createOscillator();
-    osc2.type = "square";
-    osc2.frequency.value = 22;
-    osc2.connect(engFilter);
-    osc2.start();
-
-    const buf = actx.createBuffer(1, actx.sampleRate * 2, actx.sampleRate);
-    const d = buf.getChannelData(0);
-    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-    const noise = actx.createBufferSource();
-    noise.buffer = buf;
-    noise.loop = true;
-    const nf = actx.createBiquadFilter();
-    nf.type = "bandpass";
-    nf.frequency.value = 140;
-    nf.Q.value = 0.8;
-    noiseGain = actx.createGain();
-    noiseGain.gain.value = 0;
-    noise.connect(nf); nf.connect(noiseGain); noiseGain.connect(engGain);
-    noise.start();
-
     hornGain = actx.createGain();
     hornGain.gain.value = 0;
     hornGain.connect(actx.destination);
+    // 加载真实赛车引擎样本（CC0 / Public Domain）
+    loadEngineSound();
+    // 鸣笛（合成双音；后续可换真实喇叭样本）
     [520, 660].forEach(f => {
       const h = actx.createOscillator();
       h.type = "square";
@@ -359,16 +331,33 @@ function initAudio() {
   }
 }
 
+async function loadEngineSound() {
+  try {
+    const res = await fetch("assets/engine.mp3");
+    const buf = await res.arrayBuffer();
+    engineBuffer = await actx.decodeAudioData(buf);
+    startEngineLoop();
+  } catch (e) {
+    console.log("引擎声样本加载失败:", e);
+  }
+}
+
+function startEngineLoop() {
+  if (engineSrc) { try { engineSrc.stop(); } catch (e) {} }
+  engineSrc = actx.createBufferSource();
+  engineSrc.buffer = engineBuffer;
+  engineSrc.loop = true;
+  engineSrc.playbackRate.value = 0.7;
+  engineSrc.connect(engGain);
+  engineSrc.start();
+}
+
 function updateEngine() {
   if (!actx) return;
   const t = car.throttle / 100;
-  const rpm = 45 + t * 240;
-  osc1.frequency.value = rpm;
-  osc2.frequency.value = rpm * 0.5;
-  engFilter.frequency.value = 350 + t * 1600;
-  const vol = car.mute || car.ebrk ? 0 : t * 0.3;   // 油门 0 → 无声
-  engGain.gain.value += (vol - engGain.gain.value) * 0.08;
-  noiseGain.gain.value = t * 0.07;
+  if (engineSrc) engineSrc.playbackRate.value = 0.7 + t * 1.4;   // 油门 → 转速
+  const vol = car.mute || car.ebrk ? 0 : t * 0.55;
+  engGain.gain.value += (vol - engGain.gain.value) * 0.08;        // 油门 0 → 无声
   hornGain.gain.value = car.horn && !car.mute ? 0.09 : 0;
 }
 
