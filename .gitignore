@@ -29,3 +29,6 @@ fp-info-cache
 
 # 生成文件
 *.log
+
+# 数字孪生网页（开发中，暂不归档）
+software/raspberry_pi/digital_twin/
