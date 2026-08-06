@@ -94,36 +94,55 @@ let wheelNodes = [];   // 模型内 wheel_* 节点
 let lightsGroup;
 
 function buildLights() {
-  // 灯光组挂在模型上。Three.js 权威数据：BodyHeadlights z=-2.38（车头 -Z）、
-  // BodyTaillights z=+1.93（车尾 +Z）。约定：前灯在 -Z（车头），刹车灯在 +Z（车尾）
-  lightsGroup = new THREE.Group();
-  // 前灯（车头 -Z）
+  // 只创建灯光材质；mesh 由 attachLightsToModel 挂到模型的车灯节点上
   headlightMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0 });
-  [[0.4, 0.45, -1.05], [-0.4, 0.45, -1.05]].forEach(p => {
-    const l = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.1, 0.04), headlightMat);
-    l.position.set(...p);
-    lightsGroup.add(l);
-  });
-  // 刹车灯（车尾 +Z）
   brakeMat = new THREE.MeshStandardMaterial({ color: 0xff2020, emissive: 0xff2020, emissiveIntensity: 0 });
-  const brakeBar = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.08, 0.04), brakeMat);
-  brakeBar.position.set(0, 0.45, 1.05);
-  lightsGroup.add(brakeBar);
-  // 灯带（车身两侧，随车长）
   stripMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0 });
-  [[0.6, 0.28, 0], [-0.6, 0.28, 0]].forEach(p => {
-    const s = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.04, 1.6), stripMat);
-    s.position.set(...p);
-    lightsGroup.add(s);
-  });
-  // 转向灯（车头两侧 -Z）
   turnLMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0xffaa00, emissiveIntensity: 0 });
   turnRMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0xffaa00, emissiveIntensity: 0 });
-  const tl = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 0.04), turnLMat);
-  tl.position.set(0.5, 0.45, -1.05);
-  const tr = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 0.04), turnRMat);
-  tr.position.set(-0.5, 0.45, -1.05);
-  lightsGroup.add(tl, tr);
+}
+
+// 把灯光 mesh 直接挂到模型的真实车灯节点上：
+//  前灯/转向灯 → BodyHeadlights 节点，刹车灯 → BodyTaillights 节点
+// 这样灯光跟模型车灯走，方向自动正确（不依赖任何方向假设）
+function attachLightsToModel(model) {
+  let headNode = null, tailNode = null;
+  model.traverse(o => {
+    if (o.isMesh) {
+      const n = o.name.toLowerCase();
+      if (n.includes("headlight") && !headNode) headNode = o;
+      if (n.includes("taillight") && !tailNode) tailNode = o;
+    }
+  });
+  if (headNode) {
+    [[0.2, 0, 0], [-0.2, 0, 0]].forEach(p => {
+      const l = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.08, 0.04), headlightMat);
+      l.position.set(...p);
+      headNode.add(l);
+    });
+    [[0.32, 0, 0], [-0.32, 0, 0]].forEach(p => {
+      const t = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.06, 0.03), turnLMat);
+      t.position.set(...p);
+      headNode.add(t);
+    });
+    log("[灯光] 已挂接前大灯节点");
+  } else {
+    log("[灯光] 未找到前大灯节点");
+  }
+  if (tailNode) {
+    const b = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.07, 0.04), brakeMat);
+    tailNode.add(b);
+    log("[灯光] 已挂接尾灯节点");
+  }
+  // 灯带：车身两侧（用模型包围盒自动定位，车头车尾都能亮）
+  const box = new THREE.Box3().setFromObject(model);
+  const size = box.getSize(new THREE.Vector3());
+  const hw = size.x / 2;
+  [[hw - 0.05, 0.1, 0], [-hw + 0.05, 0.1, 0]].forEach(p => {
+    const s = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.05, size.z * 0.8), stripMat);
+    s.position.set(...p);
+    model.add(s);
+  });
 }
 
 let currentModel = null, currentModelName = null;
@@ -250,22 +269,16 @@ function loadModel(name) {
       const box = new THREE.Box3().setFromObject(model);
       const size = box.getSize(new THREE.Vector3());
       model.scale.setScalar(2.2 / Math.max(size.x, size.z));
-      // 灯光挂在模型上（跟随翻转/缩放），并按车头方向旋转灯光组
-      if (cfg.noseRotY) lightsGroup.rotation.y = cfg.noseRotY;
-      else if (cfg.noseRotX) lightsGroup.rotation.x = cfg.noseRotX;
-      model.add(lightsGroup);
+      // 灯光挂到模型的真实车灯节点（方向自动对齐，不依赖任何假设）
+      attachLightsToModel(model);
       // 收集轮子
       model.traverse(o => {
-        if (o.isMesh) {
-          o.castShadow = true;
-          const n = o.name.toLowerCase();
-          // 前轮以 WheelFront 开头（含 WheelFrontL/R 及其子节点）；后轮类似
-          if (n.startsWith("wheelfront")) {
-            wheelNodes.push(o);
-            frontWheels.push(o);
-          } else if (n.startsWith("wheelrear")) {
-            wheelNodes.push(o);
-          }
+        if (o.isMesh) o.castShadow = true;
+        // WheelFrontL/R、WheelRearL/R 是组（Group）不是 Mesh，不能只查 isMesh
+        const n = o.name ? o.name.toLowerCase() : "";
+        if (/^wheel(front|rear)[lr]$/.test(n)) {
+          wheelNodes.push(o);
+          if (n.includes("front")) frontWheels.push(o);
         }
       });
       log(`轮子节点: ${wheelNodes.length} 个，前轮: ${frontWheels.length} 个`);
