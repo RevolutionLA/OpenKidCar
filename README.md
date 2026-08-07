@@ -170,7 +170,7 @@ OpenKidCar 采用类似真实汽车的分层设计：
 
 ✅ 数字孪生双端：小车端（仪表盘 + 控制区）+ 家长端（GPS / 电量 / 对讲 / 视频）
 
-✅ **干杯助手**（AI 语音助手）：按住说话 → 小智官方服务器 → 语音回复流式播放
+✅ **干杯助手**（AI 语音助手）：按住说话 → 小智官方服务器 → 语音回复流式播放（替代了旧的 vosk 离线语音控制）
 
 ✅ **干杯助手语音控制小车**：说"打开大灯/灯带/静音/档位/急刹"→ MCP 工具 → 大脑 → 小车执行
 
@@ -264,6 +264,7 @@ OpenKidCar/
 │   ├── roadmap.md
 │   ├── architecture.md
 │   ├── hardware_io_map.md       # 引脚分配图（接口契约）
+│   ├── hardware_deployment_guide.md  # 硬件部署指导书（连线/下载/烧录）
 │   ├── communication_protocol.md
 │   ├── hardware_bom.md
 │   ├── xiaozhi_integration.md   # 小智语音助手集成方案
@@ -307,13 +308,18 @@ OpenKidCar/
 运行方式：
 
 ```bash
+# 一键启动：数字孪生双端 + 干杯助手桥接
 cd software/raspberry_pi
+scripts/start_xiaozhi.bat            # Windows：同时起 twin_server + xiaozhi_bridge
+
+# 或手动分别启动：
 .venv/Scripts/python.exe digital_twin/backend/twin_server.py 8000 8001
+py-xiaozhi/.venv/Scripts/python.exe digital_twin/backend/xiaozhi_bridge.py 8010
 # 浏览器打开 http://localhost:8000（小车端）与 http://localhost:8001（家长端）
 # 手机访问家长端：同一 Wi-Fi 下用电脑局域网 IP，如 http://192.168.x.x:8001
 ```
 
-> 该网页仍在打磨中，暂不纳入 GitHub（本地开发），见 [开发日志 Day 4](logs/开发日记/20260807-day4.md)。
+> 双端数字孪生网页已完整开源在 GitHub（`software/raspberry_pi/digital_twin/`），代码见 [开发日志 Day 4](logs/开发日记/20260807-day4.md)。
 
 # 🚀 快速开始
 

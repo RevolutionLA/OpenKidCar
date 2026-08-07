@@ -12,9 +12,8 @@
 | 通信协议 V0.3 | ✅ 可用 | [communication_protocol.md](communication_protocol.md) |
 | 小脑代码骨架（Arduino） | ✅ 可编译（Mega 固件 + native 测试 10/10） | `firmware/arduino/` |
 | 大脑代码骨架（Python） | ✅ 可用（测试 15 项通过） | `software/raspberry_pi/` |
-| 语音控制（vosk） | ✅ 可用（唤醒词"干杯出来"） | `software/raspberry_pi/car_brain/voice.py` |
-| 数字孪生网页 v1（双端） | ✅ **已重设计**：弃 3D 车模，改"小车端仪表盘+控制区 / 家长端 GPS+电量+对讲+视频"，双端共享同一套大脑+小脑，双 WebSocket | `software/raspberry_pi/digital_twin/`（本地，gitignore） |
-| GitHub | ✅ 已推送（**不含**数字孪生网页） | `https://github.com/RevolutionLA/OpenKidCar` |
+| 数字孪生网页 v1（双端） | ✅ **可用并已开源**：小车端仪表盘+控制区 / 家长端 GPS+电量+对讲+视频；含干杯助手语音对话与控制小车 | `software/raspberry_pi/digital_twin/`（已纳入 git） |
+| GitHub | ✅ 已推送（**含**数字孪生网页） | `https://github.com/RevolutionLA/OpenKidCar` |
 
 **数字孪生功能清单**（2026-08-07）：
 - 小车端（`:8000`，一屏）：环形速度仪表、油门/刹车竖向长杆（转向联动转向灯）、转向手柄、档位 D1-D4、8 功能键（大灯/静音/灯带/喇叭/急刹/语音/视频/对讲）、电量/电压/电流/温度/GPS、灯光状态排、事件日志
@@ -25,7 +24,7 @@
 - 界面预览图：`media/images/小车端仿真.png`、`media/images/家长端仿真.png`
 - 一键启动：`scripts/start_xiaozhi.bat`（数字孪生 + 小智桥接）
 
-**本地已提交待推**：`main` 本地领先 origin/main 多个 commit（GitHub 网络不稳，推送待恢复）。
+**GitHub 已完全同步**（数字孪生网页已开源）。
 本地备份分支：`backup-main`（含旧版 3D 网页）。
 
 ---
