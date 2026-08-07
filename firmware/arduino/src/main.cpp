@@ -292,6 +292,21 @@ void loop() {
 
 #ifdef ARDUINO
 }  // extern "C"
+#elif defined(UNIT_TEST)
+// ============ 单元测试钩子：暴露内部状态与命令处理 ============
+// pio test 时编译进测试程序，让 Unity 测试能验证固件逻辑
+extern "C" {
+void test_handle_command(const char* c, const char* p) { handle_command(c, p); }
+int test_get_gear(void) { return g_gear; }
+bool test_get_light(void) { return g_light; }
+int test_get_mute(void) { return g_mute; }
+int test_get_strip_mode(void) { return g_strip_mode; }
+bool test_get_brake(void) { return g_brake; }
+bool test_get_ebrk(void) { return g_ebrk; }
+void test_set_ebrk(bool v) { g_ebrk = v; }
+void test_reset(void) { g_gear = 2; g_light = false; g_mute = 0;
+  g_strip_mode = 0; g_brake = false; g_ebrk = false; g_horn = false; }
+}
 #elif !defined(UNIT_TEST)
 // native 正常构建：提供 main()（pio run -e native）
 // pio test 时定义 UNIT_TEST，不提供 main（由 Unity 测试框架提供）

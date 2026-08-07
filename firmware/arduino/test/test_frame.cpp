@@ -10,7 +10,19 @@
 #include "crc8.h"
 #include "frame.h"
 
-void setUp(void) {}
+// ---- 固件测试钩子前向声明（src/main.cpp，UNIT_TEST 时暴露）----
+extern "C" {
+void test_handle_command(const char* c, const char* p);
+int test_get_gear(void);
+bool test_get_light(void);
+int test_get_mute(void);
+int test_get_strip_mode(void);
+bool test_get_brake(void);
+bool test_get_ebrk(void);
+void test_reset(void);
+}
+
+void setUp(void) { test_reset(); }
 void tearDown(void) {}
 
 // ---- CRC8 已知值：LIGHT:ON = 0xB7（见协议文档示例）----
@@ -105,6 +117,69 @@ void test_decode_truncated(void) {
   TEST_ASSERT_FALSE(ok);
 }
 
+// ============================================================
+// 固件命令逻辑测试（src/main.cpp 的测试钩子，UNIT_TEST 时暴露）
+// 验证 handle_command 对 GEAR/LIGHT/STRIP/TURN/MUTE/EBRK 等命令的处理
+// ============================================================
+void test_gear_set(void) {
+  test_handle_command("GEAR", "3");
+  TEST_ASSERT_EQUAL_INT(3, test_get_gear());
+}
+
+void test_gear_invalid(void) {
+  test_handle_command("GEAR", "5");  // 超出 1-4
+  TEST_ASSERT_EQUAL_INT(2, test_get_gear());  // 保持默认
+  test_handle_command("GEAR", "0");
+  TEST_ASSERT_EQUAL_INT(2, test_get_gear());
+}
+
+void test_light_on_off(void) {
+  test_handle_command("LIGHT", "ON");
+  TEST_ASSERT_TRUE(test_get_light());
+  test_handle_command("LIGHT", "OFF");
+  TEST_ASSERT_FALSE(test_get_light());
+}
+
+void test_light_invalid(void) {
+  test_handle_command("LIGHT", "XXX");
+  TEST_ASSERT_FALSE(test_get_light());  // 无效不改变
+}
+
+void test_mute(void) {
+  test_handle_command("MUTE", "ON");
+  TEST_ASSERT_EQUAL_INT(1, test_get_mute());
+  test_handle_command("MUTE", "OFF");
+  TEST_ASSERT_EQUAL_INT(0, test_get_mute());
+}
+
+void test_strip_on(void) {
+  test_handle_command("STRIP", "1,FF0000,100");
+  TEST_ASSERT_EQUAL_INT(1, test_get_strip_mode());
+}
+
+void test_strip_off(void) {
+  test_handle_command("STRIP", "0,FFFFFF,0");
+  TEST_ASSERT_EQUAL_INT(0, test_get_strip_mode());
+}
+
+void test_brake(void) {
+  test_handle_command("BRAKE", "ON");
+  TEST_ASSERT_TRUE(test_get_brake());
+  test_handle_command("BRAKE", "OFF");
+  TEST_ASSERT_FALSE(test_get_brake());
+}
+
+void test_ebrk(void) {
+  test_handle_command("EBRK", "ON");
+  TEST_ASSERT_TRUE(test_get_ebrk());
+  TEST_ASSERT_TRUE(test_get_brake());  // 急刹同时强制刹车
+}
+
+void test_unknown(void) {
+  test_handle_command("FOO", "BAR");
+  TEST_ASSERT_EQUAL_INT(2, test_get_gear());  // 不崩溃、状态不变
+}
+
 int main(void) {
   UNITY_BEGIN();
   RUN_TEST(test_crc8_known_value);
@@ -117,5 +192,16 @@ int main(void) {
   RUN_TEST(test_decode_missing_frame_header);
   RUN_TEST(test_roundtrip);
   RUN_TEST(test_decode_truncated);
+  // ---- 固件命令逻辑测试（来自 src/main.cpp 的测试钩子）----
+  RUN_TEST(test_gear_set);
+  RUN_TEST(test_gear_invalid);
+  RUN_TEST(test_light_on_off);
+  RUN_TEST(test_light_invalid);
+  RUN_TEST(test_mute);
+  RUN_TEST(test_strip_on);
+  RUN_TEST(test_strip_off);
+  RUN_TEST(test_brake);
+  RUN_TEST(test_ebrk);
+  RUN_TEST(test_unknown);
   return UNITY_END();
 }

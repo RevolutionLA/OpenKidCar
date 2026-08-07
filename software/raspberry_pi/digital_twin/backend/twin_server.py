@@ -38,7 +38,7 @@ from aiohttp import web
 from car_brain.brain import Brain
 from car_brain.serial_link import SerialLink
 from car_brain.simulator import CerebellumSim, Pipe
-
+from car_brain.protocol import commands as C
 FRONTEND = os.path.normpath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "frontend")
 )
@@ -46,15 +46,92 @@ KID_DIR = os.path.join(FRONTEND, "kid")
 PARENT_DIR = os.path.join(FRONTEND, "parent")
 
 
+class RealCerebellum:
+    """真实小脑适配器：命令发给 Arduino，从大脑收到的 STAT 解析状态。
+
+    接口对齐 CerebellumSim（set_throttle/press_button/...），让上层代码不变。
+    真实模式下，大脑（Brain）直接连着 Arduino 串口，所有命令和状态都走同一条链路。
+
+    ⚠️ 真实车辆：油门/刹车是小孩踩物理踏板 → Arduino 直读 A0/A1 → 本地驱动电机，
+    不经过大脑（协议里没有 THROTTLE/STEER 命令）。网页的油门/刹车只是仿真，真实模式下
+    set_throttle/set_brake 不发命令，状态从 STAT 上报读取。
+    """
+
+    def __init__(self, brain):
+        self.brain = brain
+        self.speed = 0.0
+        self.throttle = 0
+        self.brake = 0
+        self.gear = 2
+        self.light = False
+        self.strip = False
+        self.turn = " "
+        self.horn = False
+        self.ebrk = False
+        self.motor = 0
+        self.brake_light = 0
+        self.voltage = 24.6
+        self.current = 0.0
+        self.temp = 32
+        self.steer = 0.0
+
+    # ---------- 命令（发给 Arduino，决策类） ----------
+    def press_button(self, name):
+        self.brain.link.send(C.BTN, f"{name},PRESS")
+
+    def set_throttle(self, v):
+        # 真实模式：油门来自物理踏板，不发送（只记录网页值供展示）
+        self.throttle = max(0, min(100, int(v)))
+
+    def set_brake(self, v):
+        # 真实模式：刹车来自物理踏板，不发送
+        self.brake = max(0, min(100, int(v)))
+
+    def set_steer(self, v):
+        # 真实模式：转向来自物理方向盘，不发送
+        self.steer = max(-1.0, min(1.0, float(v)))
+
+    def set_horn(self, on):
+        self.horn = bool(on)
+        self.brain.set_horn(on)
+
+    def tick(self):
+        """真实模式下无需 tick（Arduino 自己跑循环上报状态）。"""
+        pass
+
+    # ---------- 状态解析（从大脑收到的 STAT 帧） ----------
+    def on_status(self, params):
+        """解析 STAT:速度,油门,档位,电压,温度,电流"""
+        try:
+            parts = params.split(",")
+            if len(parts) >= 6:
+                self.speed = float(parts[0])
+                self.throttle = int(float(parts[1]))
+                self.gear = int(float(parts[2]))
+                self.voltage = float(parts[3])
+                self.temp = float(parts[4])
+                self.current = float(parts[5])
+        except (ValueError, IndexError):
+            pass
+
+
 class TwinCore:
     """大脑 + 小脑核心：双端共享的同一辆车。"""
 
-    def __init__(self):
-        # 内存管道连接大脑与小脑（与真实硬件同一套协议 V0.3）
-        self.bp, self.cp = Pipe(), Pipe()
-        self.bp.peer, self.cp.peer = self.cp, self.bp
-        self.ceb = CerebellumSim(self.cp)          # 小脑（虚拟）
-        self.brain = Brain(SerialLink(self.bp))    # 大脑（真实决策）
+    def __init__(self, real_serial: str | None = None):
+        if real_serial:
+            # ---- 真实硬件模式：大脑直接连 Arduino 串口 ----
+            from car_brain.app import SerialPort
+            port = SerialPort(real_serial, 115200)
+            self.brain = Brain(SerialLink(port))
+            self.ceb = RealCerebellum(self.brain)   # 真实小脑适配器
+            print(f"[硬件] 真实模式：连接 Arduino {real_serial} @ 115200", flush=True)
+        else:
+            # ---- 仿真模式（默认）：内存管道连接大脑与小脑 ----
+            self.bp, self.cp = Pipe(), Pipe()
+            self.bp.peer, self.cp.peer = self.cp, self.bp
+            self.ceb = CerebellumSim(self.cp)          # 小脑（虚拟）
+            self.brain = Brain(SerialLink(self.bp))    # 大脑（真实决策）
         self.brain.on_event = self._on_brain_event
         self.brain.start()
 
@@ -79,6 +156,9 @@ class TwinCore:
         }
         if event in msgs:
             self.log(msgs[event])
+        if event == "status" and isinstance(self.ceb, RealCerebellum):
+            # 真实模式：解析 Arduino 上报的 STAT 状态
+            self.ceb.on_status(data)
 
     # ---------- 小车端命令入口 ----------
     def handle_kid_command(self, msg):
@@ -156,7 +236,9 @@ class TwinCore:
         f = self.brain.link.receive()
         if f:
             self.brain.handle_frame(*f)
-        self.ceb.tick()
+        # 真实模式下 Arduino 自己跑循环上报，无需 tick
+        if isinstance(self.ceb, CerebellumSim):
+            self.ceb.tick()
         self._update_gps()
         self._emit_state()
 
@@ -411,8 +493,28 @@ def build_parent_app():
 
 
 async def main():
-    kid_port = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
-    parent_port = int(sys.argv[2]) if len(sys.argv) > 2 else 8001
+    global core
+    # 解析参数：--real-serial <串口> 切换真实硬件模式（默认仿真）
+    real_serial = None
+    if "--real-serial" in sys.argv:
+        idx = sys.argv.index("--real-serial")
+        if idx + 1 < len(sys.argv):
+            real_serial = sys.argv[idx + 1]
+        else:
+            print("用法：--real-serial <串口>，如 --real-serial /dev/ttyACM0")
+            sys.exit(1)
+    # 端口参数（去掉 --real-serial 相关）
+    args = [a for a in sys.argv[1:] if not a.startswith("--real-serial")]
+    kid_port = int(args[0]) if len(args) > 0 and args[0].isdigit() else 8000
+    parent_port = int(args[1]) if len(args) > 1 and args[1].isdigit() else 8001
+
+    if real_serial:
+        # 重新构建 core（真实硬件模式）
+        core = TwinCore(real_serial=real_serial)
+        print("=" * 50)
+        print(f"  🚗 干杯一号 · 真实硬件模式")
+        print(f"  小脑: Arduino {real_serial} @ 115200")
+        print("=" * 50)
 
     # 状态泵只启动一次（双端共享核心）
     asyncio.create_task(pump_loop())
