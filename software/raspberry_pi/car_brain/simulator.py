@@ -196,7 +196,8 @@ class CerebellumSim:
         self.brake_light = 255 if (self.ebrk or self.brake > 10) else 0
         self.current = self.motor * 0.05
         # 电池消耗：基础自耗 + 负载（油门）消耗；电压 = SOC 换算（ADC 上报）
-        self._battery = max(0.0, self._battery - (0.004 + self.motor * 0.0008))
+        # 速率调低：约 0.3%/分钟，演示 1~2 小时可见下降，不至于几十分钟耗尽
+        self._battery = max(0.0, self._battery - (0.0005 + self.motor * 0.0002))
         self.voltage = 22.2 + (self._battery / 100.0) * (24.6 - 22.2)
         self.link.send(C.STAT, f"{self.speed},{self.throttle},{self.gear},"
                                 f"{self.voltage:.1f},{self.temp},{self.current:.1f}")

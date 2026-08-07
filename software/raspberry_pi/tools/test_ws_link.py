@@ -58,10 +58,14 @@ async def main():
     a = await recv_until(parent, "audio")
     print(f"[4] 小车端 audio → 家长端收到: {'✅' if a else '❌'}")
 
-    # 5. 家长端发 remote_ebrk → 小车端应收到急刹状态（state 里 ebrk=True）
+    # 5. 家长端发 remote_ebrk → 小车端应收到急刹状态（等几帧）
     await parent.send_str(json.dumps({"type": "remote_ebrk"}))
-    e = await recv_until(kid, "state")
-    ebrk_ok = e and e["data"]["ebrk"] is True
+    ebrk_ok = False
+    for _ in range(80):  # 最多等 80 个 state（约 1.6s）
+        e = await recv_until(kid, "state", timeout=2.0)
+        if e and e["data"]["ebrk"] is True:
+            ebrk_ok = True
+            break
     print(f"[5] 家长端远程急刹 → 小车端状态 ebrk=True: {'✅' if ebrk_ok else '❌'}")
 
     # 6. 小车端发命令（档位）→ 家长端应看到状态变化（等几帧）
