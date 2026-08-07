@@ -31,7 +31,8 @@ ws.onmessage = (e) => {
   if (m.type === "state") render(m.data);
   else if (m.type === "log") addLog(m.text);
   else if (m.type === "audio") playAudio(m.data);
-  else if (m.type === "xiaozhi_reply") playXiaozhiReply(m.data);
+  else if (m.type === "xiaozhi_reply") accumulateXiaozhiReply(m.data);
+  else if (m.type === "xiaozhi_tts_end") flushXiaozhiReply();
   else if (m.type === "xiaozhi_log") addLog(m.text);
   // 单向视频：小车只推送自己的视频给家长，不接收家长端视频流
   else if (m.type === "call") startVideoCall(true);
@@ -352,10 +353,13 @@ $("btn-video").addEventListener("click", () => {
   startVideoCall(true);             // 开摄像头推流
 });
 
-// ================= 小智对话（按住说话） =================
-const xiaozhiBtn = $("btn-xiaozhi");
+// ================= 干杯助手对话（按住说话） =================
+const xzBtn = $("btn-xiaozhi");
 let xzStream = null, xzAudioCtx = null, xzProcessor = null;
 let xzTalking = false;
+let xzReplyChunks = [];   // 累积回复 PCM 块
+let xzReplyLen = 0;
+let xzPlaying = false;
 
 async function xzStartMic() {
   if (xzStream) return true;
@@ -363,7 +367,7 @@ async function xzStartMic() {
     xzStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     return true;
   } catch (err) {
-    addLog("❌ 小智麦克风不可用: " + err.message);
+    addLog("❌ 干杯助手麦克风不可用: " + err.message);
     return false;
   }
 }
@@ -372,9 +376,9 @@ function xzStart() {
   xzStartMic().then(ok => {
     if (!ok) return;
     xzTalking = true;
-    xiaozhiBtn.classList.add("talking");
-    xiaozhiBtn.textContent = "🎙 说话中…";
-    // 用 AudioContext 采集 16kHz 单声道 PCM（小智协议要求）
+    xzBtn.classList.add("talking");
+    xzBtn.textContent = "🎙 说话中…";
+    // 用 AudioContext 采集 16kHz 单声道 PCM（协议要求）
     xzAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
     const src = xzAudioCtx.createMediaStreamSource(xzStream);
     xzProcessor = xzAudioCtx.createScriptProcessor(4096, 1, 1);
@@ -383,66 +387,81 @@ function xzStart() {
     send({ type: "xiaozhi", action: "start" });
     xzProcessor.onaudioprocess = (e) => {
       if (!xzTalking) return;
-      // 取左声道 float32 → int16 PCM
       const buf = e.inputBuffer.getChannelData(0);
       const pcm = new Int16Array(buf.length);
       for (let i = 0; i < buf.length; i++) {
         pcm[i] = Math.max(-1, Math.min(1, buf[i])) * 32767;
       }
-      // 转 base64 发送
       const bytes = new Uint8Array(pcm.buffer);
       let bin = "";
       for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
       send({ type: "xiaozhi", action: "audio", data: btoa(bin) });
     };
-    addLog("🎙 小智对话中，请按着说…");
+    addLog("🎙 干杯助手对话中，请按着说…");
   });
 }
 
 function xzStop() {
   if (!xzTalking) return;
   xzTalking = false;
-  xiaozhiBtn.classList.remove("talking");
-  xiaozhiBtn.textContent = "📡 小智";
+  xzBtn.classList.remove("talking");
+  xzBtn.textContent = "📡 干杯助手";
   if (xzProcessor) { xzProcessor.disconnect(); xzProcessor = null; }
   if (xzAudioCtx) { xzAudioCtx.close().catch(() => {}); xzAudioCtx = null; }
   send({ type: "xiaozhi", action: "stop" });
-  addLog("✅ 已松开，等待小智回复…");
+  addLog("✅ 已松开，等待干杯助手回复…");
 }
 
-function playXiaozhiReply(b64) {
-  // 收到的 24kHz PCM int16 → 转成可播放的 WAV
+// 累积回复 PCM，避免每块单独播放导致"一卡一卡"
+function accumulateXiaozhiReply(b64) {
   try {
     const bin = atob(b64);
     const bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    // 拼 WAV 头（16bit, 单声道, 24kHz）
+    xzReplyChunks.push(bytes);
+    xzReplyLen += bytes.length;
+  } catch (e) {
+    addLog("❌ 干杯助手回复解码失败: " + e.message);
+  }
+}
+
+function flushXiaozhiReply() {
+  if (xzPlaying || xzReplyLen === 0) { xzReplyLen = 0; xzReplyChunks = []; return; }
+  xzPlaying = true;
+  try {
+    // 合并所有块 → 一个 WAV
+    const all = new Uint8Array(xzReplyLen);
+    let off = 0;
+    for (const c of xzReplyChunks) { all.set(c, off); off += c.length; }
     const sr = 24000, ch = 1, bits = 16;
-    const dataLen = bytes.length;
+    const dataLen = all.length;
     const buf = new ArrayBuffer(44 + dataLen);
     const dv = new DataView(buf);
-    const wstr = (off, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(off + i, s.charCodeAt(i)); };
+    const wstr = (o, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
     wstr(0, "RIFF"); dv.setUint32(4, 36 + dataLen, true); wstr(8, "WAVE");
     wstr(12, "fmt "); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, ch, true);
     dv.setUint32(24, sr, true); dv.setUint32(28, sr * ch * bits / 8, true);
     dv.setUint16(32, ch * bits / 8, true); dv.setUint16(34, bits, true);
     wstr(36, "data"); dv.setUint32(40, dataLen, true);
-    new Uint8Array(buf, 44).set(bytes);
+    new Uint8Array(buf, 44).set(all);
     const blob = new Blob([buf], { type: "audio/wav" });
     const url = URL.createObjectURL(blob);
     const au = new Audio(url);
-    au.play().catch(() => {});
-    addLog("🔊 小智回复中…");
+    au.onended = () => { xzPlaying = false; URL.revokeObjectURL(url); };
+    au.play().catch(() => { xzPlaying = false; });
+    addLog(`🔊 干杯助手回复中… (${(dataLen / (sr * 2)).toFixed(1)}s)`);
   } catch (e) {
-    addLog("❌ 小智回复播放失败: " + e.message);
+    xzPlaying = false;
+    addLog("❌ 干杯助手回复播放失败: " + e.message);
   }
+  xzReplyLen = 0; xzReplyChunks = [];
 }
 
-xiaozhiBtn.addEventListener("pointerdown", (e) => { e.preventDefault(); xzStart(); });
-xiaozhiBtn.addEventListener("pointerup", xzStop);
-xiaozhiBtn.addEventListener("pointerleave", xzStop);
-xiaozhiBtn.addEventListener("touchstart", (e) => { e.preventDefault(); xzStart(); }, { passive: false });
-xiaozhiBtn.addEventListener("touchend", xzStop);
+xzBtn.addEventListener("pointerdown", (e) => { e.preventDefault(); xzStart(); });
+xzBtn.addEventListener("pointerup", xzStop);
+xzBtn.addEventListener("pointerleave", xzStop);
+xzBtn.addEventListener("touchstart", (e) => { e.preventDefault(); xzStart(); }, { passive: false });
+xzBtn.addEventListener("touchend", xzStop);
 
 // ================= 时钟 =================
 setInterval(() => {

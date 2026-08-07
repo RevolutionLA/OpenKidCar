@@ -244,7 +244,7 @@ body::before {
 .btn.ptt:hover { box-shadow: 0 0 14px rgba(96,165,250,0.4); }
 .btn.ptt.talking { background: linear-gradient(180deg, var(--blue), #2563eb); color: #fff; box-shadow: 0 0 20px rgba(96,165,250,0.7); }
 
-/* 小智对话（按住说话） */
+/* 干杯助手对话（按住说话） */
 .btn#btn-xiaozhi { border: 2px solid rgba(52,211,153,0.5); color: var(--green); }
 .btn#btn-xiaozhi:hover { box-shadow: 0 0 14px rgba(52,211,153,0.4); }
 .btn#btn-xiaozhi.talking { background: linear-gradient(180deg, var(--green), #059669); color: #fff; box-shadow: 0 0 20px rgba(52,211,153,0.7); }

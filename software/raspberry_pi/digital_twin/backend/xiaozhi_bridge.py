@@ -44,12 +44,13 @@ from src.audio_codecs.opus_codec import OpusCodec
 class XiaozhiSession:
     """连接小智服务器，处理一段对话。"""
 
-    def __init__(self, on_audio, on_log):
+    def __init__(self, on_audio, on_log, on_tts_end=None):
         self.protocol = WebsocketProtocol()
         self.codec = OpusCodec(16000, 24000, 1)  # 16k 编码，24k 解码
         self.codec.initialize()
         self.on_audio = on_audio      # async (base64 pcm)
         self.on_log = on_log          # (text)
+        self.on_tts_end = on_tts_end  # async (TTS 结束，通知前端播放)
         self.connected = False
         self._ready_event = asyncio.Event()
 
@@ -75,8 +76,11 @@ class XiaozhiSession:
         t = data.get("type", "")
         if t == "tts":
             state = data.get("state", "")
-            # 可在这里触发 UI 提示（可选）
-            pass
+            # TTS 结束：通知前端把累积的回复 PCM 一次播放（避免一卡一卡）
+            if state == "stop":
+                asyncio.get_event_loop().create_task(
+                    self.on_tts_end()
+                )
 
     def _handle_incoming_audio(self, data: bytes):
         # 小智返回的 Opus 帧 → 解码成 float32 PCM
@@ -159,13 +163,17 @@ class BridgeServer:
     async def _reply_audio(self, b64):
         await self._send({"type": "xiaozhi_reply", "data": b64})
 
+    async def _tts_end(self):
+        # 通知前端：回复音频累积完毕，一次播放
+        await self._send({"type": "xiaozhi_tts_end"})
+
     async def ws_handler(self, request):
         ws = web.WebSocketResponse()
         await ws.prepare(request)
         self.clients.add(ws)
         # 懒初始化会话
         if self.session is None:
-            self.session = XiaozhiSession(self._reply_audio, self._log)
+            self.session = XiaozhiSession(self._reply_audio, self._log, self._tts_end)
         try:
             async for msg in ws:
                 if msg.type == web.WSMsgType.TEXT:
