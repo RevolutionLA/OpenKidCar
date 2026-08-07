@@ -274,6 +274,7 @@ OpenKidCar/
 │   └── arduino/           # Arduino 固件
 ├── software/
 │   └── raspberry_pi/      # Raspberry Pi 软件
+│       └── tools/         # 开发辅助工具（OCR 读图 / CDP 真实截图）
 ├── cad/
 │   └── body_design/       # 车身三维模型
 ├── media/
