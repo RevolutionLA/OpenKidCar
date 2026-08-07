@@ -362,11 +362,43 @@ async def no_cache(request, handler):
     return resp
 
 
+# ================= 本地控制 API（干杯助手 MCP 工具 → 大脑） =================
+async def control_handler(request):
+    """接收干杯助手 MCP 工具的控制命令，调用大脑执行。
+    body: {"action": "light"|"strip"|"mute"|"gear"|"horn"|"ebrk", "value": ...}
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        return web.json_response({"ok": False, "error": "bad json"}, status=400)
+    action = body.get("action")
+    value = body.get("value")
+    brain = core.brain
+    if action == "light":
+        brain.set_light(bool(value))
+    elif action == "strip":
+        brain.set_strip(1 if value else 0)
+    elif action == "mute":
+        brain.set_mute(bool(value))
+    elif action == "gear":
+        brain.set_gear(int(value))
+    elif action == "horn":
+        brain.set_horn(bool(value))
+    elif action == "ebrk":
+        brain.remote_ebrake()
+    else:
+        return web.json_response({"ok": False, "error": f"unknown action {action}"}, status=400)
+    core.log(f"🎙 干杯助手控制: {action}={value}")
+    return web.json_response({"ok": True})
+
+
 def build_kid_app():
     app = web.Application(middlewares=[no_cache])
     app.router.add_get("/ws", ws_kid_handler)
     app.router.add_get("/", lambda r: web.FileResponse(os.path.join(KID_DIR, "index.html")))
     app.router.add_static("/static", KID_DIR)
+    # 本地控制 API（供干杯助手 MCP 工具调用大脑）
+    app.router.add_post("/api/control", control_handler)
     return app
 
 

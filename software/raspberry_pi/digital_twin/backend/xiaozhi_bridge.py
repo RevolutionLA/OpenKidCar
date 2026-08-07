@@ -20,6 +20,7 @@ import json
 import os
 import sys
 
+import aiohttp
 import numpy as np
 
 # 把 py-xiaozhi 加入 sys.path（本脚本用 py-xiaozhi 的 venv 运行，src 包可导入）
@@ -81,6 +82,136 @@ class XiaozhiSession:
                 asyncio.get_event_loop().create_task(
                     self.on_tts_end()
                 )
+        elif t == "mcp":
+            # 服务器发来的 MCP JSON-RPC（tools/list、tools/call 等）
+            payload = data.get("payload", {})
+            method = payload.get("method", "")
+            rid = payload.get("id")
+            print(f"[MCP] 收到 {method} id={rid}", flush=True)
+            if method == "initialize":
+                self._send_mcp_result(rid, {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {"tools": {}},
+                    "serverInfo": {"name": "car-device-bridge", "version": "1.0.0"},
+                })
+            elif method == "tools/list":
+                self._send_mcp_result(rid, {"tools": self._mcp_tools_list()})
+            elif method == "tools/call":
+                params = payload.get("params", {})
+                name = params.get("name", "")
+                args = params.get("arguments", {})
+                asyncio.get_event_loop().create_task(
+                    self._mcp_call(rid, name, args)
+                )
+            else:
+                self._send_mcp_error(rid, f"unsupported method {method}")
+
+    # ---------- MCP 工具（干杯助手语音控制小车） ----------
+    _MCP_TOOLS = [
+        {
+            "name": "car.light",
+            "description": "控制小车大灯开关。触发词：打开大灯、关闭大灯、开灯、关灯、亮灯。参数 on: true 开灯，false 关灯。",
+            "inputSchema": {
+                "type": "object",
+                "properties": {"on": {"type": "boolean", "description": "true 开灯，false 关灯"}},
+                "required": ["on"],
+            },
+        },
+        {
+            "name": "car.strip",
+            "description": "控制小车灯带开关。触发词：打开灯带、关闭灯带、开灯带、关灯带。参数 on: true 开，false 关。",
+            "inputSchema": {
+                "type": "object",
+                "properties": {"on": {"type": "boolean", "description": "true 开灯带，false 关灯带"}},
+                "required": ["on"],
+            },
+        },
+        {
+            "name": "car.mute",
+            "description": "控制小车静音。触发词：静音、取消静音、静音关闭、安静。参数 on: true 静音，false 取消静音。",
+            "inputSchema": {
+                "type": "object",
+                "properties": {"on": {"type": "boolean", "description": "true 静音，false 取消静音"}},
+                "required": ["on"],
+            },
+        },
+        {
+            "name": "car.gear",
+            "description": "设置小车档位。触发词：一档、二档、三档、四档。参数 gear: 1-4。",
+            "inputSchema": {
+                "type": "object",
+                "properties": {"gear": {"type": "integer", "minimum": 1, "maximum": 4, "description": "档位 1-4"}},
+                "required": ["gear"],
+            },
+        },
+        {
+            "name": "car.ebrake",
+            "description": "触发小车紧急刹车。触发词：急刹、紧急刹车、停车。无参数。",
+            "inputSchema": {"type": "object", "properties": {}},
+        },
+        {
+            "name": "car.horn",
+            "description": "小车鸣笛。触发词：鸣笛、按喇叭、响喇叭。参数 on: true 鸣笛，false 停止。",
+            "inputSchema": {
+                "type": "object",
+                "properties": {"on": {"type": "boolean", "description": "true 鸣笛"}},
+                "required": ["on"],
+            },
+        },
+    ]
+
+    def _mcp_tools_list(self):
+        return self._MCP_TOOLS
+
+    async def _mcp_call(self, rid, name, args):
+        action_map = {
+            "car.light": ("light", bool(args.get("on"))),
+            "car.strip": ("strip", bool(args.get("on"))),
+            "car.mute": ("mute", bool(args.get("on"))),
+            "car.gear": ("gear", int(args.get("gear", 2))),
+            "car.horn": ("horn", bool(args.get("on"))),
+            "car.ebrake": ("ebrk", None),
+        }
+        if name not in action_map:
+            self._send_mcp_error(rid, f"unknown tool {name}")
+            return
+        action, value = action_map[name]
+        try:
+            ok = await self._control_car(action, value)
+            await self.on_log(f"🎙 干杯助手执行: {action}={value} {'✅' if ok else '❌'}")
+            self._send_mcp_result(rid, {
+                "content": [{"type": "text", "text": f"{action}={value} {'ok' if ok else 'fail'}"}],
+                "isError": not ok,
+            })
+        except Exception as e:
+            print(f"[MCP] 工具执行失败: {e}", flush=True)
+            self._send_mcp_error(rid, str(e))
+
+    async def _control_car(self, action, value):
+        """通过 HTTP 调 twin_server 的 /api/control 执行大脑控制。"""
+        body = {"action": action}
+        if value is not None:
+            body["value"] = value
+        async with aiohttp.ClientSession() as sess:
+            try:
+                async with sess.post("http://127.0.0.1:8000/api/control", json=body,
+                                     timeout=aiohttp.ClientTimeout(total=5)) as resp:
+                    return resp.status == 200
+            except Exception as e:
+                print(f"[MCP] 调大脑失败: {e}", flush=True)
+                return False
+
+    def _send_mcp_result(self, rid, result):
+        self._send_mcp({"jsonrpc": "2.0", "id": rid, "result": result})
+
+    def _send_mcp_error(self, rid, message):
+        self._send_mcp({"jsonrpc": "2.0", "id": rid,
+                        "error": {"code": -32000, "message": message}})
+
+    def _send_mcp(self, payload):
+        asyncio.get_event_loop().create_task(
+            self.protocol.send_mcp_message(payload)
+        )
 
     def _handle_incoming_audio(self, data: bytes):
         # 小智返回的 Opus 帧 → 解码成 float32 PCM
