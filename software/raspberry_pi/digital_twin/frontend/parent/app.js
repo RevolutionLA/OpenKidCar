@@ -48,6 +48,16 @@ function render(s) {
   const ebrkEl = $("p-ebrk");
   ebrkEl.textContent = s.ebrk ? "触发！" : "正常";
   ebrkEl.className = s.ebrk ? "danger" : "safe";
+  // 电源（坐垫/上下电）
+  const seatEl = $("p-seat");
+  seatEl.textContent = s.seat ? "运行" : "关闭";
+  seatEl.className = s.seat ? "safe" : "dim";
+  const seatBtn = $("btn-seat");
+  seatBtn.textContent = s.seat ? "⚡ 下电" : "⚡ 上电";
+  seatBtn.classList.toggle("on", !!s.seat);
+  // 档位按钮高亮
+  document.querySelectorAll(".gbtn").forEach((b) =>
+    b.classList.toggle("active", parseInt(b.dataset.g) === s.gear));
 
   // GPS
   const g = s.gps;
@@ -56,7 +66,12 @@ function render(s) {
   $("p-sat").textContent = g.sat;
   $("p-head").textContent = Math.round(g.heading) + "°";
   pushTrace(g);
-  drawMap();
+  if (!replaying) drawMap();
+  // 记录轨迹历史（回放用）
+  if (s.gps_history && s.gps_history.length) {
+    latestHistory = s.gps_history;
+    histForReplay = s.gps_history;
+  }
 
   // 电量
   const bat = Math.round(s.battery_pct);
@@ -251,6 +266,106 @@ $("btn-ebrk").addEventListener("click", () => {
   btn.style.transform = "scale(0.98)";
   setTimeout(() => (btn.style.transform = ""), 120);
 });
+
+// ================= 家长远程设档位（F-DRV-04 / F-APP-01） =================
+document.querySelectorAll(".gbtn").forEach((b) => {
+  b.addEventListener("click", () => {
+    send({ type: "gear", value: parseInt(b.dataset.g) });
+    document.querySelectorAll(".gbtn").forEach((x) =>
+      x.classList.toggle("active", x === b));
+  });
+});
+
+// ================= 远程上下电（F-PWR-01/02） =================
+$("btn-seat").addEventListener("click", () => {
+  const turningOn = !$("btn-seat").classList.contains("on");
+  send({ type: "seat", value: turningOn });
+});
+
+// ================= 轨迹回放（F-GPS-03 / F-APP-07） =================
+let replaying = false, replayTimer = null, replayIdx = 0;
+
+function startReplay() {
+  if (replaying) { stopReplay(); return; }
+  const hist = latestHistory;
+  if (!hist || hist.length < 2) {
+    $("btn-replay").textContent = "暂无轨迹";
+    setTimeout(() => ($("btn-replay").textContent = "⏪ 回放轨迹"), 1500);
+    return;
+  }
+  replaying = true;
+  replayIdx = 0;
+  $("btn-replay").textContent = "⏹ 停止回放";
+  const step = () => {
+    if (!replaying) return;
+    if (replayIdx >= hist.length) { stopReplay(); return; }
+    drawReplayPoint(hist[replayIdx]);
+    replayIdx++;
+    replayTimer = setTimeout(step, 120);
+  };
+  step();
+}
+
+function stopReplay() {
+  replaying = false;
+  if (replayTimer) { clearTimeout(replayTimer); replayTimer = null; }
+  $("btn-replay").textContent = "⏪ 回放轨迹";
+  drawMap();  // 恢复实时轨迹
+}
+
+function drawReplayPoint(pt) {
+  const cv = $("map");
+  const ctx = cv.getContext("2d");
+  const W = cv.width, H = cv.height;
+  ctx.clearRect(0, 0, W, H);
+  // 网格
+  ctx.strokeStyle = "rgba(34,211,238,0.08)";
+  for (let i = 0; i <= 6; i++) {
+    ctx.beginPath(); ctx.moveTo((W / 6) * i, 0); ctx.lineTo((W / 6) * i, H); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, (H / 6) * i); ctx.lineTo(W, (H / 6) * i); ctx.stroke();
+  }
+  // 计算坐标（用历史全范围）
+  let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+  for (const p of histForReplay) {
+    minLat = Math.min(minLat, p[0]); maxLat = Math.max(maxLat, p[0]);
+    minLng = Math.min(minLng, p[1]); maxLng = Math.max(maxLng, p[1]);
+  }
+  const cosLat = Math.cos((pt[0] * Math.PI) / 180);
+  const scale = Math.min((W - 40) / Math.max(maxLng - minLng, 1e-6) / cosLat,
+                         (H - 40) / Math.max(maxLat - minLat, 1e-6));
+  const X = (lng) => W / 2 + (lng - (minLng + maxLng) / 2) * cosLat * scale;
+  const Y = (lat) => H / 2 - (lat - (minLat + maxLat) / 2) * scale;
+  // 已走轨迹（当前点之前的）
+  ctx.beginPath();
+  ctx.strokeStyle = "rgba(34,211,238,0.8)";
+  ctx.lineWidth = 2.5;
+  ctx.shadowColor = "#22d3ee"; ctx.shadowBlur = 8;
+  for (let i = 0; i <= replayIdx && i < histForReplay.length; i++) {
+    const p = histForReplay[i];
+    const x = X(p[1]), y = Y(p[0]);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  // 当前位置（发光）
+  ctx.beginPath();
+  ctx.fillStyle = "#34d399";
+  ctx.shadowColor = "#34d399"; ctx.shadowBlur = 12;
+  ctx.arc(X(pt[1]), Y(pt[0]), 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  // 信息
+  ctx.font = "11px sans-serif";
+  ctx.fillStyle = "#dbe7f3";
+  ctx.fillText(`回放 ${replayIdx}/${histForReplay.length}`, 8, H - 8);
+}
+
+// 记录最新一次收到的轨迹历史（供回放）
+let latestHistory = null;
+let histForReplay = [];
+
+// 回放按钮
+$("btn-replay").addEventListener("click", startReplay);
 
 // ================= 时钟 =================
 setInterval(() => {

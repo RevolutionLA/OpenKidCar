@@ -146,6 +146,8 @@ class TwinCore:
         self.gps_lng = 116.3975
         self.gps_heading = 0.0
         self.gps_sat = 11
+        self.gps_history = []      # 轨迹历史（轨迹回放用，限 500 点）
+        self.gps_history_limit = 500
 
     # ---------- 大脑事件 ----------
     def _on_brain_event(self, event, data):
@@ -190,6 +192,14 @@ class TwinCore:
         if t == "remote_ebrk":
             self.brain.remote_ebrake()
             self.log("📱 家长远程急刹！")
+        elif t == "gear":
+            # 家长远程设置档位（F-DRV-04 / F-APP-01）
+            self.brain.set_gear(int(msg["value"]))
+            self.log(f"📱 家长设置档位 → D{msg['value']}")
+        elif t == "seat":
+            # 家长远程上下电（F-PWR-01/02 模拟）
+            self.ceb.set_seat(bool(msg["value"]))
+            self.log(f"📱 家长{'上电' if msg['value'] else '下电'}")
 
     # ---------- 语音识别（vosk，可选） ----------
     def toggle_voice(self):
@@ -254,6 +264,13 @@ class TwinCore:
         self.gps_lng += dist * math.sin(math.radians(self.gps_heading)) / (
             m_per_deg * math.cos(math.radians(self.gps_lat))
         )
+        # 记录轨迹历史（轨迹回放用，去重：车不动不重复记）
+        if not self.gps_history or self.gps_history[-1][0] != round(self.gps_lat, 6) \
+           or self.gps_history[-1][1] != round(self.gps_lng, 6):
+            self.gps_history.append([round(self.gps_lat, 6), round(self.gps_lng, 6),
+                                     round(self.gps_heading, 1), int(time.time() * 1000)])
+            if len(self.gps_history) > self.gps_history_limit:
+                self.gps_history.pop(0)
 
     def _battery_pct(self):
         # 24.6V 满电 -> 100%，22.2V 空电 -> 0%
@@ -288,6 +305,8 @@ class TwinCore:
                 "sat": self.gps_sat,
                 "heading": self.gps_heading,
             },
+            "seat": getattr(self.ceb, "seat", False),      # 坐垫/上下电状态
+            "gps_history": list(self.gps_history),          # 轨迹历史（回放）
         }
 
     def _emit_state(self):

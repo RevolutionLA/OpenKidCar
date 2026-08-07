@@ -27,12 +27,27 @@
         <span class="vm"><label>档位</label><b id="p-gear">D2</b></span>
         <span class="vm"><label>油门</label><b id="p-throttle">0%</b></span>
         <span class="vm"><label>急刹</label><b id="p-ebrk" class="safe">正常</b></span>
+        <span class="vm"><label>电源</label><b id="p-seat" class="safe">关闭</b></span>
+      </div>
+    </div>
+    <!-- 家长远程设档位（F-DRV-04） -->
+    <div class="gear-set">
+      <label class="gs-label">远程档位</label>
+      <div class="gear-btns">
+        <button class="gbtn" data-g="1">D1</button>
+        <button class="gbtn" data-g="2">D2</button>
+        <button class="gbtn" data-g="3">D3</button>
+        <button class="gbtn" data-g="4">D4</button>
       </div>
     </div>
   </section>
 
   <!-- GPS 定位 -->
   <section class="card gps">
+    <div class="gps-head">
+      <label class="gs-label">实时定位</label>
+      <button class="small-btn" id="btn-replay">⏪ 回放轨迹</button>
+    </div>
     <div class="map-wrap"><canvas id="map" width="480" height="260"></canvas></div>
     <div class="gps-row">
       <span class="g"><label>纬度</label><b id="p-lat">--.------</b></span>
@@ -70,10 +85,11 @@
     </div>
   </section>
 
-  <!-- 对讲 + 远程急刹（统一大小） -->
+  <!-- 对讲 + 远程急刹 + 上下电（统一大小） -->
   <div class="talk-ebrk">
     <button class="ptt" id="ptt">📻 按住说话</button>
     <button class="remote-ebrk" id="btn-ebrk">🛑 远程急刹</button>
+    <button class="seat-btn" id="btn-seat">⚡ 上电</button>
   </div>
 
 </main>

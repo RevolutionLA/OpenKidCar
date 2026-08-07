@@ -113,11 +113,17 @@ class CerebellumSim:
         self.temp = 32
         self.current = 0.0
         self.steer = 0.0          # 转向 -1..1（方向盘传感）
+        self.seat = False         # 坐垫检测：坐下 True（上电），离座 False
         self._battery = 100.0     # 电池 SOC（0-100%），由小脑 ADC 侧模拟
         self._ready = False
 
     def press_button(self, name):
         self.link.send(C.BTN, f"{name},PRESS")
+
+    def set_seat(self, on: bool):
+        """坐垫压力：坐下上电，离座下电（F-PWR-01/02）。"""
+        self.seat = bool(on)
+        self.link.send(C.SEAT, "ON" if on else "OFF")
 
     def set_throttle(self, v):
         self.throttle = max(0, min(100, int(v)))

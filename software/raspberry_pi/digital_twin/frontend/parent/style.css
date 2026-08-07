@@ -87,6 +87,39 @@ body::before {
 .vm b { font-family: var(--font-num); color: var(--text); }
 .vm b.safe { color: var(--green); }
 .vm b.danger { color: var(--red); }
+.vm b.dim { color: var(--dim); }
+
+/* 家长远程设档位 */
+.gear-set { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.gs-label { font-size: 10px; color: var(--dim); letter-spacing: 1px; display: block; margin-bottom: 5px; }
+.gear-btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.gbtn {
+  padding: 8px 0; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--panel-2);
+  color: var(--dim); font-size: 12px; font-weight: 700; font-family: var(--font-num);
+  cursor: pointer; transition: all 0.15s;
+}
+.gbtn:hover { border-color: var(--cyan); color: var(--cyan); }
+.gbtn.active { background: linear-gradient(180deg, rgba(34,211,238,0.2), rgba(34,211,238,0.05)); border-color: var(--cyan); color: var(--cyan); box-shadow: var(--glow); }
+
+/* GPS 头部（实时 + 回放按钮） */
+.gps-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.small-btn {
+  padding: 5px 12px; border-radius: 8px; font-size: 11px;
+  border: 1px solid rgba(34,211,238,0.4); background: rgba(34,211,238,0.08);
+  color: var(--cyan); cursor: pointer;
+}
+.small-btn:active { background: rgba(34,211,238,0.2); }
+
+/* 上下电按钮（与对讲/急刹统一） */
+.seat-btn {
+  padding: 14px 0; border-radius: 11px;
+  border: 2px solid rgba(52,211,153,0.6);
+  background: linear-gradient(180deg, rgba(52,211,153,0.15), rgba(52,211,153,0.04));
+  color: var(--green); font-size: 14px; font-weight: 700; cursor: pointer;
+  transition: all 0.15s;
+}
+.seat-btn.on { background: linear-gradient(180deg, var(--green), #059669); color: #fff; box-shadow: 0 0 20px rgba(52,211,153,0.6); }
 
 /* ============ GPS 卡 ============ */
 .gps { padding: 8px; }
@@ -129,6 +162,7 @@ body::before {
 
 /* ============ 对讲 + 急刹 ============ */
 .talk-ebrk { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex: 0 0 auto; }
+.talk-ebrk .seat-btn { grid-column: span 2; }
 .ptt {
   padding: 14px 0; border-radius: 11px;
   border: 2px solid rgba(96,165,250,0.6);
