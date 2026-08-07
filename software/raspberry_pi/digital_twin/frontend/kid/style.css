@@ -1,0 +1,266 @@
+/* ============ 干杯一号 · 小车端 视觉 Token ============ */
+:root {
+  --bg: #070b12;
+  --panel: #0e1520;
+  --panel-2: #111a27;
+  --line: #1c2735;
+  --text: #dbe7f3;
+  --dim: #71839b;
+  --cyan: #22d3ee;
+  --blue: #60a5fa;
+  --amber: #f59e0b;
+  --green: #34d399;
+  --red: #f87171;
+  --font-cn: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
+  --font-num: Consolas, "Cascadia Code", "SF Mono", monospace;
+  --glow: 0 0 18px rgba(34, 211, 238, 0.35);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* 一屏显示，不滚动 */
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  display: flex; flex-direction: column;
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(34, 211, 238, 0.06), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(96, 165, 250, 0.05), transparent 60%),
+    var(--bg);
+  color: var(--text);
+  font-family: var(--font-cn);
+}
+body::before {
+  content: ""; position: fixed; inset: 0; z-index: -1;
+  background-image:
+    linear-gradient(rgba(34, 211, 238, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 211, 238, 0.025) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: radial-gradient(ellipse at 50% 30%, #000 30%, transparent 75%);
+}
+
+/* ============ 面板 ============ */
+.panel {
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.panel-title {
+  font-size: 11px; letter-spacing: 2px; color: var(--dim); font-weight: 600;
+  padding-bottom: 6px; margin-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+  display: flex; align-items: baseline; gap: 8px;
+}
+.panel-title small { font-size: 9px; letter-spacing: 3px; color: rgba(113,131,155,0.6); }
+
+/* ============ HUD ============ */
+.hud {
+  display: flex; align-items: center; gap: 12px; flex: 0 0 auto;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(14,21,32,0.9), transparent);
+}
+.brand { font-family: var(--font-num); font-size: 17px; font-weight: 700; letter-spacing: 3px; }
+.brand .no { color: var(--cyan); text-shadow: var(--glow); }
+.brand-sub { font-size: 11px; color: var(--dim); letter-spacing: 1px; }
+.hud-status { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+.chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 9px; border-radius: 999px;
+  border: 1px solid var(--line); font-size: 11px; color: var(--dim);
+  background: rgba(14,21,32,0.7);
+}
+.chip b { color: var(--text); font-family: var(--font-num); }
+.chip .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); }
+.chip .dot.amber { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+.chip.on .dot { background: var(--green); box-shadow: 0 0 10px var(--green); }
+.chip.on { color: var(--text); border-color: rgba(52,211,153,0.4); }
+.clock { font-family: var(--font-num); font-size: 16px; color: var(--cyan); }
+
+/* ============ 主布局（一屏网格） ============ */
+.main {
+  flex: 1 1 auto; min-height: 0;
+  display: grid; grid-template-columns: 1fr 1.05fr; gap: 12px;
+  padding: 12px 16px;
+  align-items: stretch;
+}
+.dash, .controls { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+
+/* ============ 速度环（签名元素） ============ */
+.speed-wrap { position: relative; width: 188px; height: 188px; margin: 0 auto 6px; flex: 0 0 auto; }
+.speed-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+.speed-ring .ring-bg { fill: none; stroke: var(--line); stroke-width: 11; stroke-linecap: round; }
+.speed-ring .ring-val {
+  fill: none; stroke: url(#speedGrad); stroke-width: 11; stroke-linecap: round;
+  stroke-dasharray: 0 578; stroke-dashoffset: 0;   /* dash 长度由 JS 动态设置（0=隐藏，433.5=满270°） */
+  filter: drop-shadow(0 0 8px rgba(34,211,238,0.6));
+  transition: stroke-dasharray 0.15s ease-out;
+}
+.speed-ring .needle {
+  stroke: var(--cyan); stroke-width: 3; stroke-linecap: round;
+  transform-origin: 110px 110px;
+  filter: drop-shadow(0 0 6px rgba(34,211,238,0.8));
+  transition: transform 0.15s ease-out;
+}
+.speed-ring .hub { fill: var(--cyan); }
+.speed-ring .tick { stroke: var(--dim); stroke-width: 2; }
+.speed-ring .tick.big { stroke: var(--text); stroke-width: 3; }
+
+.speed-val { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.speed-val .v { font-family: var(--font-num); font-size: 48px; font-weight: 700; line-height: 1; text-shadow: 0 0 20px rgba(34,211,238,0.45); }
+.speed-val .u { font-size: 11px; color: var(--dim); letter-spacing: 2px; margin-top: 4px; }
+.speed-gear {
+  position: absolute; right: 0; bottom: 14px;
+  font-family: var(--font-num); font-size: 13px; color: var(--amber);
+  border: 1px solid rgba(245,158,11,0.4); border-radius: 6px;
+  padding: 1px 8px; background: rgba(245,158,11,0.08);
+}
+
+/* ============ 仪表条 ============ */
+.gauge-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 4px 0 8px; flex: 0 0 auto; }
+.gauge { text-align: center; }
+.gauge label { font-size: 10px; color: var(--dim); letter-spacing: 1px; }
+.gauge .bar { height: 6px; background: var(--line); border-radius: 999px; margin: 4px 0 2px; overflow: hidden; }
+.gauge .fill { display: block; height: 100%; width: 0%; border-radius: 999px; transition: width 0.15s ease-out; }
+.fill.cyan { background: linear-gradient(90deg, var(--cyan), var(--blue)); box-shadow: 0 0 8px var(--cyan); }
+.fill.red  { background: linear-gradient(90deg, #fca5a5, var(--red)); box-shadow: 0 0 8px var(--red); }
+.fill.amber{ background: linear-gradient(90deg, #fcd34d, var(--amber)); box-shadow: 0 0 8px var(--amber); }
+.gauge em { font-style: normal; font-family: var(--font-num); font-size: 11px; }
+
+/* ============ 数据块 ============ */
+.data-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 8px; flex: 0 0 auto; }
+.data { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; }
+.data.wide { grid-column: span 2; }
+.data label { font-size: 9px; color: var(--dim); letter-spacing: 1px; display: block; }
+.data span { font-family: var(--font-num); font-size: 13px; color: var(--cyan); }
+
+/* ============ 灯光状态排 ============ */
+.lamps { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; flex: 0 0 auto; }
+.lamp {
+  text-align: center; font-size: 10px; color: var(--dim);
+  padding: 4px 1px; border-radius: 6px;
+  border: 1px solid var(--line); background: var(--panel-2);
+  transition: all 0.2s;
+}
+.lamp[data-color="red"] { --color: var(--red); }
+.lamp[data-color="amber"] { --color: var(--amber); }
+.lamp[data-color="cyan"] { --color: var(--cyan); }
+.lamp[data-color="green"] { --color: var(--green); }
+.lamp[data-color="blue"] { --color: var(--blue); }
+.lamp.on { color: var(--bg); font-weight: 700; border-color: transparent; background: var(--color, var(--cyan)); box-shadow: 0 0 10px var(--color, var(--cyan)); }
+
+/* ============ 控制区 ============ */
+.controls { gap: 8px; }
+.block { flex: 0 0 auto; }
+.blk-label {
+  font-size: 10px; color: var(--dim); letter-spacing: 2px;
+  display: block; margin-bottom: 4px;
+}
+.blk-label small { letter-spacing: 1px; }
+
+/* 档位 */
+.gear-btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.gear {
+  padding: 8px 0; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--panel-2);
+  color: var(--dim); font-size: 13px; font-weight: 700; font-family: var(--font-num);
+  cursor: pointer; transition: all 0.15s;
+}
+.gear:hover { border-color: var(--cyan); color: var(--cyan); }
+.gear.active { background: linear-gradient(180deg, rgba(34,211,238,0.2), rgba(34,211,238,0.05)); border-color: var(--cyan); color: var(--cyan); box-shadow: var(--glow); }
+
+/* 转向手柄（横向瘦长） */
+.steer-slider {
+  width: 100%; -webkit-appearance: none; appearance: none;
+  height: 6px; border-radius: 999px;
+  background: linear-gradient(90deg, var(--line), var(--cyan), var(--line));
+  outline: none;
+}
+.steer-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, var(--cyan) 55%);
+  border: 2px solid rgba(255,255,255,0.5);
+  box-shadow: 0 0 10px rgba(34,211,238,0.7); cursor: pointer;
+}
+.steer-slider::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--cyan); border: 2px solid #fff; cursor: pointer; }
+.steer-read { display: flex; justify-content: space-between; font-size: 10px; color: var(--dim); margin-top: 2px; }
+.steer-read b { font-family: var(--font-num); color: var(--cyan); font-size: 12px; }
+
+/* 主操控区：两侧按钮列 + 中间油门/刹车杆（杆与按钮等高，整体垂直居中） */
+.pedals-side {
+  flex: 1 1 auto; min-height: 0;
+  display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px;
+  align-items: center;   /* 杆+按钮组垂直居中，上下留白对称 */
+}
+.side-btns { display: flex; flex-direction: column; gap: 8px; }
+.side-btns .btn { padding: 15px 0; }
+.pedals { display: flex; gap: 22px; justify-content: center; align-items: center; }
+.pedal { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+
+/* 油门 / 刹车（竖向杆，高度与按钮列完全一致，不超长） */
+.v-slider {
+  -webkit-appearance: none; appearance: none;
+  writing-mode: vertical-lr;
+  direction: rtl;
+  height: 240px; width: 48px;
+  background: linear-gradient(180deg, var(--line), transparent);
+  border: 1px solid var(--line); border-radius: 12px;
+  outline: none; cursor: pointer;
+}
+.v-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.6);
+}
+.v-slider.throttle::-webkit-slider-thumb { background: radial-gradient(circle at 35% 30%, #fff, var(--cyan) 55%); box-shadow: 0 0 10px rgba(34,211,238,0.6); }
+.v-slider.brake::-webkit-slider-thumb { background: radial-gradient(circle at 35% 30%, #fff, var(--red) 55%); box-shadow: 0 0 10px rgba(248,113,113,0.6); }
+.v-slider::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #fff; }
+.v-slider.throttle::-moz-range-thumb { background: var(--cyan); }
+.v-slider.brake::-moz-range-thumb { background: var(--red); }
+.pedal-read { font-style: normal; font-family: var(--font-num); font-size: 14px; }
+
+/* 功能按钮（两侧竖排，统一大小，含对讲） */
+.btn {
+  padding: 11px 0; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--panel-2);
+  color: var(--dim); font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+  user-select: none; touch-action: none;
+}
+.btn:hover { border-color: var(--blue); color: var(--text); }
+.btn:active { transform: scale(0.97); }
+.btn.on { background: linear-gradient(180deg, rgba(34,211,238,0.18), rgba(34,211,238,0.04)); border-color: var(--cyan); color: var(--cyan); box-shadow: var(--glow); }
+.btn.voice-on { border-color: var(--green); color: var(--green); box-shadow: 0 0 12px rgba(52,211,153,0.4); }
+
+/* 急刹 */
+.btn.ebrk { border: 2px solid rgba(248,113,113,0.5); color: var(--red); }
+.btn.ebrk:hover { box-shadow: 0 0 18px rgba(248,113,113,0.4); }
+.btn.ebrk.on { background: linear-gradient(180deg, var(--red), #b91c1c); color: #fff; box-shadow: 0 0 22px rgba(248,113,113,0.7); animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+
+/* 对讲（按住说话，与其他按钮同大小） */
+.btn.ptt { border: 2px solid rgba(96,165,250,0.5); color: var(--blue); }
+.btn.ptt:hover { box-shadow: 0 0 14px rgba(96,165,250,0.4); }
+.btn.ptt.talking { background: linear-gradient(180deg, var(--blue), #2563eb); color: #fff; box-shadow: 0 0 20px rgba(96,165,250,0.7); }
+
+/* 小智对话（按住说话） */
+.btn#btn-xiaozhi { border: 2px solid rgba(52,211,153,0.5); color: var(--green); }
+.btn#btn-xiaozhi:hover { box-shadow: 0 0 14px rgba(52,211,153,0.4); }
+.btn#btn-xiaozhi.talking { background: linear-gradient(180deg, var(--green), #059669); color: #fff; box-shadow: 0 0 20px rgba(52,211,153,0.7); }
+
+/* ============ 事件日志（矮） ============ */
+.log { margin: 0 16px 10px; flex: 0 0 auto; padding: 8px 12px; }
+.log .panel-title { margin-bottom: 5px; }
+.logbox { height: 52px; overflow-y: auto; font-family: var(--font-num); font-size: 11px; line-height: 1.6; color: var(--dim); }
+.logbox .line { white-space: nowrap; padding: 0; }
+.logbox .line time { color: rgba(113,131,155,0.5); margin-right: 8px; }
+.logbox .line .tag { color: var(--cyan); margin-right: 8px; }
+
+.hidden { display: none !important; }
+
+/* ============ 响应式 ============ */
+@media (max-width: 980px) {
+  .main { grid-template-columns: 1fr; overflow-y: auto; }
+  body { overflow-y: auto; }
+}

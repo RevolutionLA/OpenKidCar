@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>干杯一号 · 家长端</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header class="hud">
+  <div class="brand">GANBEI <span class="no">NO.1</span></div>
+  <div class="brand-sub">家长监护端</div>
+  <div class="hud-right">
+    <span class="chip" id="chip-online"><i class="dot"></i><span id="online-text">孩子在线</span></span>
+    <span class="clock" id="clock">--:--:--</span>
+  </div>
+</header>
+
+<main class="stack">
+
+  <!-- 孩子车辆状态 -->
+  <section class="card vehicle">
+    <div class="v-row">
+      <div class="v-speed"><span class="n" id="p-speed">0</span><span class="u">km/h</span></div>
+      <div class="v-meta">
+        <span class="vm">档位 <b id="p-gear">D2</b></span>
+        <span class="vm">油门 <b id="p-throttle">0%</b></span>
+        <span class="vm">急刹 <b id="p-ebrk" class="safe">正常</b></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- GPS 定位 -->
+  <section class="card gps">
+    <div class="map-wrap"><canvas id="map" width="480" height="260"></canvas></div>
+    <div class="gps-row">
+      <span class="g">纬度 <b id="p-lat">--.------</b></span>
+      <span class="g">经度 <b id="p-lng">--.------</b></span>
+      <span class="g">卫星 <b id="p-sat">--</b></span>
+      <span class="g">朝向 <b id="p-head">--°</b></span>
+    </div>
+  </section>
+
+  <!-- 电量 -->
+  <section class="card power">
+    <div class="battery">
+      <div class="battery-body"><div class="battery-fill" id="bat-fill"></div><span class="battery-text" id="p-bat">--%</span></div>
+      <div class="battery-cap"></div>
+    </div>
+    <div class="power-row">
+      <span class="p">电压 <b id="p-volt">-- V</b></span>
+      <span class="p">电流 <b id="p-amp">-- A</b></span>
+      <span class="p">温度 <b id="p-temp">-- ℃</b></span>
+    </div>
+  </section>
+
+  <!-- 视频通话（按需显示：不点视频时只留按钮） -->
+  <section class="card video">
+    <div class="video-area hidden" id="video-area">
+      <div class="remote">
+        <img id="remote-video" alt="孩子画面">
+        <span class="remote-empty" id="remote-empty">等待连接…</span>
+      </div>
+      <span class="call-state" id="call-state">未连接</span>
+    </div>
+    <div class="video-btns">
+      <button class="vbtn call" id="btn-call">📷 视频通话</button>
+      <button class="vbtn end hidden" id="btn-hangup">挂断</button>
+    </div>
+  </section>
+
+  <!-- 对讲 + 远程急刹 -->
+  <div class="talk-ebrk">
+    <div class="ptt-wrap">
+      <button class="ptt" id="ptt">📻 按住说话</button>
+      <div class="talk-hint" id="talk-hint">按住说话，孩子那边会响起对讲声</div>
+    </div>
+    <button class="remote-ebrk" id="btn-ebrk">🛑 远程急刹</button>
+  </div>
+
+</main>
+
+<audio id="talk-player" hidden></audio>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

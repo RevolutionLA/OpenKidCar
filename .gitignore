@@ -33,8 +33,11 @@ fp-info-cache
 # 密钥（勿提交 git）
 .env
 
-# 数字孪生网页（开发中，暂不归档）
-software/raspberry_pi/digital_twin/
+# 数字孪生网页（现在纳入 git，仅排除旧 3D 版本和大模型）
+software/raspberry_pi/digital_twin/frontend/_legacy/
+software/raspberry_pi/digital_twin/frontend/kid/vendor/
+software/raspberry_pi/digital_twin/frontend/parent/vendor/
+software/raspberry_pi/digital_twin/backend/serve.py
 
 # 第三方小智客户端 py-xiaozhi（另行部署，不入库）
 software/raspberry_pi/py-xiaozhi/

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>干杯一号 · 小车端</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<!-- ======= HUD 顶部状态条 ======= -->
+<header class="hud">
+  <div class="brand">GANBEI <span class="no">NO.1</span></div>
+  <div class="brand-sub">干杯一号 · 小车端</div>
+  <div class="hud-status">
+    <span class="chip" id="chip-brain"><i class="dot"></i>大脑</span>
+    <span class="chip" id="chip-cere"><i class="dot"></i>小脑</span>
+    <span class="chip"><i class="dot amber"></i>档位 <b id="hud-gear">2</b></span>
+    <span class="clock" id="clock">--:--:--</span>
+  </div>
+</header>
+
+<main class="main">
+
+  <!-- ======= 仪表盘区 ======= -->
+  <section class="panel dash">
+    <h2 class="panel-title">仪表盘 <small>DASHBOARD</small></h2>
+
+    <!-- 签名元素：环形速度仪表 -->
+    <div class="speed-wrap">
+      <svg class="speed-ring" viewBox="0 0 220 220">
+        <defs>
+          <linearGradient id="speedGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#22d3ee"/>
+            <stop offset="100%" stop-color="#60a5fa"/>
+          </linearGradient>
+        </defs>
+        <circle class="ring-bg" cx="110" cy="110" r="92"/>
+        <circle class="ring-val" cx="110" cy="110" r="92"/>
+        <line class="needle" id="needle" x1="110" y1="110" x2="110" y2="32"/>
+        <circle class="hub" cx="110" cy="110" r="6"/>
+        <g id="ticks"></g>
+      </svg>
+      <div class="speed-val">
+        <span class="v" id="speed">0</span>
+        <span class="u">km/h</span>
+      </div>
+      <div class="speed-gear" id="speed-gear">D2</div>
+    </div>
+
+    <!-- 油门 / 刹车 / 电机 仪表条 -->
+    <div class="gauge-row">
+      <div class="gauge"><label>油门</label><div class="bar"><i id="g-throttle" class="fill cyan"></i></div><em id="g-throttle-v">0</em></div>
+      <div class="gauge"><label>刹车</label><div class="bar"><i id="g-brake" class="fill red"></i></div><em id="g-brake-v">0</em></div>
+      <div class="gauge"><label>电机</label><div class="bar"><i id="g-motor" class="fill amber"></i></div><em id="g-motor-v">0</em></div>
+    </div>
+
+    <!-- 数据块 -->
+    <div class="data-grid">
+      <div class="data"><label>电量</label><span id="d-bat">--%</span></div>
+      <div class="data"><label>电压</label><span id="d-volt">-- V</span></div>
+      <div class="data"><label>电流</label><span id="d-cur">-- A</span></div>
+      <div class="data"><label>温度</label><span id="d-temp">-- ℃</span></div>
+      <div class="data wide"><label>GPS 定位</label><span id="d-gps">--.------ , --.------</span></div>
+    </div>
+
+    <!-- 灯光状态排 -->
+    <div class="lamps">
+      <div class="lamp" data-color="cyan"  id="lamp-light">大灯</div>
+      <div class="lamp" data-color="blue"  id="lamp-strip">灯带</div>
+      <div class="lamp" data-color="amber" id="lamp-turnl">左转</div>
+      <div class="lamp" data-color="amber" id="lamp-turnr">右转</div>
+      <div class="lamp" data-color="red"   id="lamp-brake">刹车</div>
+      <div class="lamp" data-color="red"   id="lamp-ebrk">急刹</div>
+      <div class="lamp" data-color="green" id="lamp-mute">静音</div>
+    </div>
+  </section>
+
+  <!-- ======= 控制区 ======= -->
+  <section class="panel controls">
+    <h2 class="panel-title">控制区 <small>CONTROL</small></h2>
+
+    <!-- 档位 -->
+    <div class="block">
+      <label class="blk-label">档位 GEAR</label>
+      <div class="gear-btns">
+        <button class="gear" data-g="1">D1</button>
+        <button class="gear" data-g="2">D2</button>
+        <button class="gear" data-g="3">D3</button>
+        <button class="gear" data-g="4">D4</button>
+      </div>
+    </div>
+
+    <!-- 转向手柄（横向瘦长） -->
+    <div class="block">
+      <label class="blk-label">转向手柄 STEER</label>
+      <input type="range" class="steer-slider" id="steer" min="-100" max="100" value="0" step="1">
+      <div class="steer-read"><span>左</span><b id="steer-val">0°</b><span>右</span></div>
+    </div>
+
+    <!-- 主操控区：两侧按钮列 + 中间油门/刹车长杆 -->
+    <div class="block pedals-side">
+      <div class="side-btns">
+        <button class="btn" id="sw-light">大灯</button>
+        <button class="btn" id="sw-mute">静音</button>
+        <button class="btn" id="sw-strip">灯带</button>
+        <button class="btn" id="btn-xiaozhi">📡 小智</button>
+        <button class="btn" id="sw-horn">📢 喇叭</button>
+      </div>
+      <div class="pedals">
+        <div class="pedal">
+          <input type="range" class="v-slider throttle" id="throttle" min="0" max="100" value="0" step="1">
+          <em id="throttle-val" class="pedal-read">0</em>
+        </div>
+        <div class="pedal">
+          <input type="range" class="v-slider brake" id="brake" min="0" max="100" value="0" step="1">
+          <em id="brake-val" class="pedal-read">0</em>
+        </div>
+      </div>
+      <div class="side-btns">
+        <button class="btn ebrk" id="btn-ebrk">🛑 急刹</button>
+        <button class="btn" id="sw-voice">🎙 语音</button>
+        <button class="btn" id="btn-video">📷 视频</button>
+        <button class="btn ptt" id="ptt">📻 对讲</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ======= 事件日志 ======= -->
+<footer class="panel log">
+  <h2 class="panel-title">事件日志 <small>EVENT LOG</small></h2>
+  <div id="log" class="logbox"></div>
+</footer>
+
+<audio id="talk-player" hidden></audio>
+<video id="local-video" hidden autoplay playsinline muted></video>
+<canvas id="send-canvas" width="320" height="240" hidden></canvas>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
