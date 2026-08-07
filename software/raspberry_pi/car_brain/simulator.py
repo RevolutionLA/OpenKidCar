@@ -113,6 +113,7 @@ class CerebellumSim:
         self.temp = 32
         self.current = 0.0
         self.steer = 0.0          # 转向 -1..1（方向盘传感）
+        self._battery = 100.0     # 电池 SOC（0-100%），由小脑 ADC 侧模拟
         self._ready = False
 
     def press_button(self, name):
@@ -194,6 +195,9 @@ class CerebellumSim:
         self.motor = 0 if (self.ebrk or self.brake > 10) else self.throttle
         self.brake_light = 255 if (self.ebrk or self.brake > 10) else 0
         self.current = self.motor * 0.05
+        # 电池消耗：基础自耗 + 负载（油门）消耗；电压 = SOC 换算（ADC 上报）
+        self._battery = max(0.0, self._battery - (0.004 + self.motor * 0.0008))
+        self.voltage = 22.2 + (self._battery / 100.0) * (24.6 - 22.2)
         self.link.send(C.STAT, f"{self.speed},{self.throttle},{self.gear},"
                                 f"{self.voltage:.1f},{self.temp},{self.current:.1f}")
 

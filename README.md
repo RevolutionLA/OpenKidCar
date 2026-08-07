@@ -284,6 +284,33 @@ OpenKidCar/
     └── 开发日记/           # 开发过程记录
 ```
 
+# 🖥️ 双端数字孪生（v1，开发中）
+
+> 用**真实的大脑（树莓派）+ 小脑（Arduino）代码**跑真实信号，双端共享同一辆车。
+> 无 3D 车模 —— 仪表盘 + 控制区 + 家长区。
+
+```
+一个进程 TwinCore（真实 Brain + CerebellumSim）
+ ├─ http://localhost:8000  小车端：仪表盘区 + 控制区
+ └─ http://localhost:8001  家长端：GPS / 电量 / 对讲 / 视频（手机友好）
+```
+
+<p align="center">
+  <img src="media/images/twin_kid.png" alt="小车端：仪表盘区 + 控制区" width="72%">
+  <img src="media/images/twin_parent.png" alt="家长端：GPS/电量/对讲/视频" width="24%">
+</p>
+
+运行方式：
+
+```bash
+cd software/raspberry_pi
+.venv/Scripts/python.exe digital_twin/backend/twin_server.py 8000 8001
+# 浏览器打开 http://localhost:8000（小车端）与 http://localhost:8001（家长端）
+# 手机访问家长端：同一 Wi-Fi 下用电脑局域网 IP，如 http://192.168.x.x:8001
+```
+
+> 该网页仍在打磨中，暂不纳入 GitHub（本地开发），见 [开发日志 Day 4](logs/开发日记/20260807-day4.md)。
+
 # 🚀 快速开始
 
 项目正处于 V0.1 原型开发阶段。可以先阅读 [产品需求文档](docs/product_requirements.md) 了解干杯一号的完整功能规划，或从 [系统架构](docs/architecture.md)、[通信协议](docs/communication_protocol.md) 和 [开发日志](docs/development_log.md) 开始了解技术细节。

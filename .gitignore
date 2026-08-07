@@ -32,3 +32,8 @@ fp-info-cache
 
 # 数字孪生网页（开发中，暂不归档）
 software/raspberry_pi/digital_twin/
+
+# Agent 工具（skills 等，不属于项目代码）
+.agents/
+skills-lock.json
+.claude/skills/

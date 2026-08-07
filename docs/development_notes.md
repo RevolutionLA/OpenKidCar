@@ -13,7 +13,7 @@
 | 小脑代码骨架（Arduino） | ✅ 可编译（Mega 固件 + native 测试 10/10） | `firmware/arduino/` |
 | 大脑代码骨架（Python） | ✅ 可用（测试 15 项通过） | `software/raspberry_pi/` |
 | 语音控制（vosk） | ✅ 可用（唤醒词"干杯出来"） | `software/raspberry_pi/car_brain/voice.py` |
-| 数字孪生网页（Three.js） | ⚠️ **v0 失败，重新设计中**（未纳入 git） | `software/raspberry_pi/digital_twin/`（本地，gitignore） |
+| 数字孪生网页 v1（双端） | ✅ **已重设计**：弃 3D 车模，改"小车端仪表盘+控制区 / 家长端 GPS+电量+对讲+视频"，双端共享同一套大脑+小脑，双 WebSocket | `software/raspberry_pi/digital_twin/`（本地，gitignore） |
 | GitHub | ✅ 已推送（**不含**数字孪生网页） | `https://github.com/RevolutionLA/OpenKidCar` |
 
 **当前版本已推送**：`main` → `c1bfe4a`（含 Day 3 开发日志，无网页）。
@@ -104,10 +104,11 @@ cd software/raspberry_pi && .venv/Scripts/python.exe -m unittest discover -s tes
 
 ## 6. 下一步计划
 
-1. **重新设计数字孪生网页**（遵守第 4 节教训）：方向跟节点走、布局一次到位、保留日志调试。
-2. 继续打磨物理模型（加速度曲线、坡度等）。
-3. 找到干净的开源卡丁车模型（或接受 CarConcept 概念车）。
+1. ✅ **数字孪生 v1 已重设计**（2026-08-07，见 [Day 4 日志](../logs/开发日记/20260807-day4.md)）：弃 3D 车模，改双端架构 —— 小车端(8000)仪表盘区+控制区、家长端(8001)GPS+电量+对讲+视频，**双端共享同一套真实大脑+小脑**。
+2. 打磨数字孪生 v1：视觉细节、对讲/视频体验、家长端实测反馈。
+3. 继续打磨物理模型（加速度曲线、坡度等）。
 4. 鸣笛换真实 CC0 喇叭声。
+5. 双端稳定满意后，考虑把数字孪生网页正式纳入 GitHub 归档。
 
 ---
 
