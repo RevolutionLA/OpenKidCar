@@ -415,9 +415,14 @@ let xzNextStart = 0;        // 下一块应开始的时刻（AudioContext 时钟
 let xzPlayStarted = false;  // 是否已开始播第一块
 
 function ensurePlayCtx() {
-  if (xzPlayCtx) return true;
+  if (xzPlayCtx) {
+    // 保持运行，避免被浏览器挂起导致卡顿
+    if (xzPlayCtx.state === "suspended") xzPlayCtx.resume().catch(() => {});
+    return true;
+  }
   try {
     xzPlayCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (xzPlayCtx.state === "suspended") xzPlayCtx.resume().catch(() => {});
     return true;
   } catch (e) {
     addLog("❌ 干杯助手播放初始化失败: " + e.message);
@@ -425,7 +430,7 @@ function ensurePlayCtx() {
   }
 }
 
-// 每块到达：立即解码 → 排到精确时刻播放（第一块立刻播，后续无缝接上）
+// 每块到达：立即解码 → 排到"上一块结尾"的精确时刻（无缝衔接）
 function accumulateXiaozhiReply(b64) {
   if (!ensurePlayCtx()) return;
   try {
@@ -444,16 +449,16 @@ function accumulateXiaozhiReply(b64) {
       if (v >= 32768) v -= 65536;
       ch[i] = v / 32768;
     }
-    // 调度：开始时刻 = 上一块结尾（或马上）
+    // 调度：开始时刻 = 上一块结尾，绝不提前（避免重叠卡顿）
     const now = xzPlayCtx.currentTime;
-    let when = xzNextStart > now ? xzNextStart : now + 0.02;  // 稍提前缓冲
+    let when = xzNextStart;
+    if (when < now + 0.03) when = now + 0.03;  // 首块/延迟块：等 30ms 缓冲
     const src = xzPlayCtx.createBufferSource();
     src.buffer = buf;
     src.connect(xzPlayCtx.destination);
     src.start(when);
-    xzNextStart = when + buf.duration;      // 下一块接在这块之后
+    xzNextStart = when + buf.duration;      // 下一块严格接在这块之后
     xzPlayStarted = true;
-    if (!xzPlayCtx.listener && xzPlayCtx.resume) xzPlayCtx.resume().catch(() => {});
   } catch (e) {
     addLog("❌ 干杯助手回复解码失败: " + e.message);
   }

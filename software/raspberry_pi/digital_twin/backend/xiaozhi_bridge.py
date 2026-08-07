@@ -52,6 +52,10 @@ class XiaozhiSession:
         self.on_audio = on_audio      # async (base64 pcm)
         self.on_log = on_log          # (text)
         self.on_tts_end = on_tts_end  # async (TTS 结束，通知前端播放)
+        # 回复缓冲：攒够 ~200ms 再发前端，吸收服务器帧到达抖动
+        self._reply_buf = bytearray()
+        self._reply_buf_bytes = 0
+        self._flush_threshold = 24000 * 2 * 5 // 10  # 200ms = 9600 字节 int16
         self.connected = False
         self._ready_event = asyncio.Event()
 
@@ -77,10 +81,10 @@ class XiaozhiSession:
         t = data.get("type", "")
         if t == "tts":
             state = data.get("state", "")
-            # TTS 结束：通知前端把累积的回复 PCM 一次播放（避免一卡一卡）
+            # TTS 结束：冲刷剩余缓冲 + 通知前端累积播放
             if state == "stop":
                 asyncio.get_event_loop().create_task(
-                    self.on_tts_end()
+                    self._on_tts_stop()
                 )
         elif t == "mcp":
             # 服务器发来的 MCP JSON-RPC（tools/list、tools/call 等）
@@ -214,7 +218,7 @@ class XiaozhiSession:
         )
 
     def _handle_incoming_audio(self, data: bytes):
-        # 小智返回的 Opus 帧 → 解码成 float32 PCM
+        # 小智返回的 Opus 帧 → 解码成 float32 PCM → 累积缓冲
         try:
             from src.audio_codecs.opus_codec import parse_opus_toc
             info = parse_opus_toc(data)
@@ -227,10 +231,28 @@ class XiaozhiSession:
             # float32 → int16（必须 clip，防溢出爆音/电音！）
             pcm16 = np.clip(pcm, -1.0, 1.0)
             pcm16 = (pcm16 * 32767).astype("<i2").tobytes()
-            b64 = base64.b64encode(pcm16).decode()
-            asyncio.get_event_loop().create_task(self.on_audio(b64))
+            # 累积到缓冲，攒够阈值再发前端（吸收到达抖动）
+            self._reply_buf += pcm16
+            self._reply_buf_bytes += len(pcm16)
+            if self._reply_buf_bytes >= self._flush_threshold:
+                self._flush_reply_buf()
         except Exception as e:
             print(f"[小智] 解码回复失败: {e}", flush=True)
+
+    def _flush_reply_buf(self):
+        """把累积的回复 PCM 一次性发前端（清空缓冲）。"""
+        if self._reply_buf_bytes == 0:
+            return
+        b64 = base64.b64encode(bytes(self._reply_buf)).decode()
+        self._reply_buf = bytearray()
+        self._reply_buf_bytes = 0
+        asyncio.get_event_loop().create_task(self.on_audio(b64))
+
+    async def _on_tts_stop(self):
+        """TTS 结束：冲刷剩余缓冲 + 通知前端。"""
+        self._flush_reply_buf()
+        if self.on_tts_end:
+            await self.on_tts_end()
 
     # ---------- 供桥接 WS 调用 ----------
     async def connect(self):
