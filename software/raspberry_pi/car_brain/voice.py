@@ -85,6 +85,7 @@ class VoiceController:
         self.awake_timeout = awake_timeout
         self.awake = False
         self._awake_until = 0.0
+        self.always_awake = False   # 常开模式：开启后每条指令直接识别，无需反复唤醒
         self._stop = threading.Event()
         self._thread = None
         # 指令回调：on_command(cmd, params)
@@ -128,7 +129,8 @@ class VoiceController:
             self.awake = False
             return None
         cmd = self._match_command(text)
-        self.awake = False
+        if not self.always_awake:
+            self.awake = False
         return cmd
 
     # ---------------- 识别主循环 ----------------

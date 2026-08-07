@@ -126,7 +126,15 @@ class CerebellumSim:
         self.brake = max(0, min(100, int(v)))
 
     def set_steer(self, v):
-        self.steer = max(-1.0, min(1.0, float(v)))
+        v = max(-1.0, min(1.0, float(v)))
+        self.steer = v
+        # 转向灯自动联动：手柄打左/右亮对应转向灯（真实车辆行为）
+        if v < -0.25:
+            self.turn = "L"
+        elif v > 0.25:
+            self.turn = "R"
+        else:
+            self.turn = " "
 
     def set_horn(self, on):
         self.horn = bool(on)
