@@ -80,8 +80,10 @@ body::before {
 .v-speed { display: flex; flex-direction: column; align-items: center; flex: 0 0 auto; }
 .v-speed .n { font-family: var(--font-num); font-size: 40px; font-weight: 700; line-height: 1; color: var(--cyan); text-shadow: 0 0 18px rgba(34,211,238,0.5); }
 .v-speed .u { font-size: 10px; color: var(--dim); letter-spacing: 2px; }
-.v-meta { flex: 1; display: flex; flex-direction: column; gap: 3px; }
-.vm { display: flex; justify-content: space-between; font-size: 13px; }
+.v-meta { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.vm { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding: 2px 0; border-bottom: 1px solid rgba(28,39,53,0.5); }
+.vm:last-child { border-bottom: none; }
+.vm label { color: var(--dim); }
 .vm b { font-family: var(--font-num); color: var(--text); }
 .vm b.safe { color: var(--green); }
 .vm b.danger { color: var(--red); }
@@ -91,8 +93,9 @@ body::before {
 .map-wrap { border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
 #map { display: block; width: 100%; height: auto; background: #0a1018; }
 .gps-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 6px; }
-.g { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; text-align: center; font-size: 9px; color: var(--dim); }
-.g b { display: block; font-family: var(--font-num); font-size: 11px; color: var(--cyan); }
+.g { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 5px 6px; text-align: center; font-size: 9px; color: var(--dim); }
+.g label { display: block; }
+.g b { display: block; font-family: var(--font-num); font-size: 12px; color: var(--cyan); margin-top: 2px; }
 
 /* ============ 电量卡 ============ */
 .power { padding: 8px 12px; }
@@ -104,7 +107,8 @@ body::before {
 .battery-cap { width: 7px; height: 18px; background: var(--line); border-radius: 0 4px 4px 0; }
 .power-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .p { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 7px; text-align: center; font-size: 10px; color: var(--dim); }
-.p b { display: block; font-family: var(--font-num); font-size: 14px; color: var(--text); margin-top: 1px; }
+.p label { display: block; }
+.p b { display: block; font-family: var(--font-num); font-size: 14px; color: var(--text); margin-top: 2px; }
 
 /* ============ 视频卡 ============ */
 .video { padding: 8px; }
@@ -124,9 +128,7 @@ body::before {
 .vbtn:active { transform: scale(0.98); }
 
 /* ============ 对讲 + 急刹 ============ */
-.talk-ebrk { display: grid; grid-template-columns: 1.3fr 1fr; gap: 8px; flex: 0 0 auto; }
-.ptt-wrap { display: flex; flex-direction: column; gap: 4px; }
-.talk-hint { font-size: 10px; color: var(--dim); text-align: center; min-height: 12px; }
+.talk-ebrk { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex: 0 0 auto; }
 .ptt {
   padding: 14px 0; border-radius: 11px;
   border: 2px solid rgba(96,165,250,0.6);

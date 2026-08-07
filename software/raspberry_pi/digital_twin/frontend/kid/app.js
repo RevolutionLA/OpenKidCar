@@ -251,13 +251,6 @@ $("btn-ebrk").addEventListener("click", () => {
   addLog("急刹按钮按下（再次按下解除）");
 });
 
-// ================= 语音控制 =================
-$("sw-voice").addEventListener("click", () => {
-  initAudio();
-  send({ type: "voice" });
-  addLog("🎙 语音控制切换");
-});
-
 // ================= 对讲（PTT 按住说话 → 家长） =================
 const talkPlayer = $("talk-player");
 let recorder = null, recChunks = [];

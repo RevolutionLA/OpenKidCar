@@ -183,7 +183,6 @@ async function ensureMic() {
     };
     return true;
   } catch {
-    $("talk-hint").textContent = "⚠️ 无法使用麦克风";
     return false;
   }
 }
@@ -195,7 +194,6 @@ ptt.addEventListener("pointerdown", async (e) => {
   if (!(await ensureMic())) return;
   pttOn = true;
   ptt.classList.add("talking");
-  $("talk-hint").textContent = "正在对孩子说话…";
   recChunks = [];
   recorder.start();
 });
@@ -203,7 +201,6 @@ ptt.addEventListener("pointerup", () => {
   if (!pttOn) return;
   pttOn = false;
   ptt.classList.remove("talking");
-  $("talk-hint").textContent = "按住说话，孩子那边会响起对讲声";
   if (recorder.state !== "inactive") recorder.stop();
 });
 ptt.addEventListener("pointerleave", () => ptt.dispatchEvent(new Event("pointerup")));
