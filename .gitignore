@@ -36,6 +36,9 @@ fp-info-cache
 # 数字孪生网页（开发中，暂不归档）
 software/raspberry_pi/digital_twin/
 
+# 第三方小智客户端 py-xiaozhi（另行部署，不入库）
+software/raspberry_pi/py-xiaozhi/
+
 # Agent 工具（skills 等，不属于项目代码）
 .agents/
 skills-lock.json

@@ -264,6 +264,7 @@ OpenKidCar/
 │   ├── hardware_io_map.md       # 引脚分配图（接口契约）
 │   ├── communication_protocol.md
 │   ├── hardware_bom.md
+│   ├── xiaozhi_integration.md   # 小智语音助手集成方案
 │   ├── development_notes.md     # 开发笔记与状态存档
 │   └── development_log.md
 ├── hardware/
