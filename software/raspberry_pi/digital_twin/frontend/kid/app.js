@@ -357,9 +357,6 @@ $("btn-video").addEventListener("click", () => {
 const xzBtn = $("btn-xiaozhi");
 let xzStream = null, xzAudioCtx = null, xzProcessor = null;
 let xzTalking = false;
-let xzReplyChunks = [];   // 累积回复 PCM 块
-let xzReplyLen = 0;
-let xzPlaying = false;
 
 async function xzStartMic() {
   if (xzStream) return true;
@@ -412,49 +409,60 @@ function xzStop() {
   addLog("✅ 已松开，等待干杯助手回复…");
 }
 
-// 累积回复 PCM，避免每块单独播放导致"一卡一卡"
+// 流式播放回复：每块到达立即排进 AudioContext 时钟，低延迟 + 无缝衔接
+let xzPlayCtx = null;       // 播放用 AudioContext（与麦克风采集独立）
+let xzNextStart = 0;        // 下一块应开始的时刻（AudioContext 时钟）
+let xzPlayStarted = false;  // 是否已开始播第一块
+
+function ensurePlayCtx() {
+  if (xzPlayCtx) return true;
+  try {
+    xzPlayCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return true;
+  } catch (e) {
+    addLog("❌ 干杯助手播放初始化失败: " + e.message);
+    return false;
+  }
+}
+
+// 每块到达：立即解码 → 排到精确时刻播放（第一块立刻播，后续无缝接上）
 function accumulateXiaozhiReply(b64) {
+  if (!ensurePlayCtx()) return;
   try {
     const bin = atob(b64);
     const bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    xzReplyChunks.push(bytes);
-    xzReplyLen += bytes.length;
+    const sr = 24000;
+    const nSamples = bytes.length / 2;      // int16 = 2 字节
+    if (nSamples <= 0) return;
+    // 建 AudioBuffer（int16 → float32）
+    const buf = xzPlayCtx.createBuffer(1, nSamples, sr);
+    const ch = buf.getChannelData(0);
+    for (let i = 0; i < nSamples; i++) {
+      // 有符号 int16（小端）：先拼无符号，再转有符号
+      let v = bytes[i * 2] | (bytes[i * 2 + 1] << 8);
+      if (v >= 32768) v -= 65536;
+      ch[i] = v / 32768;
+    }
+    // 调度：开始时刻 = 上一块结尾（或马上）
+    const now = xzPlayCtx.currentTime;
+    let when = xzNextStart > now ? xzNextStart : now + 0.02;  // 稍提前缓冲
+    const src = xzPlayCtx.createBufferSource();
+    src.buffer = buf;
+    src.connect(xzPlayCtx.destination);
+    src.start(when);
+    xzNextStart = when + buf.duration;      // 下一块接在这块之后
+    xzPlayStarted = true;
+    if (!xzPlayCtx.listener && xzPlayCtx.resume) xzPlayCtx.resume().catch(() => {});
   } catch (e) {
     addLog("❌ 干杯助手回复解码失败: " + e.message);
   }
 }
 
 function flushXiaozhiReply() {
-  if (xzPlaying || xzReplyLen === 0) { xzReplyLen = 0; xzReplyChunks = []; return; }
-  xzPlaying = true;
-  try {
-    // 合并所有块 → 一个 WAV
-    const all = new Uint8Array(xzReplyLen);
-    let off = 0;
-    for (const c of xzReplyChunks) { all.set(c, off); off += c.length; }
-    const sr = 24000, ch = 1, bits = 16;
-    const dataLen = all.length;
-    const buf = new ArrayBuffer(44 + dataLen);
-    const dv = new DataView(buf);
-    const wstr = (o, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
-    wstr(0, "RIFF"); dv.setUint32(4, 36 + dataLen, true); wstr(8, "WAVE");
-    wstr(12, "fmt "); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, ch, true);
-    dv.setUint32(24, sr, true); dv.setUint32(28, sr * ch * bits / 8, true);
-    dv.setUint16(32, ch * bits / 8, true); dv.setUint16(34, bits, true);
-    wstr(36, "data"); dv.setUint32(40, dataLen, true);
-    new Uint8Array(buf, 44).set(all);
-    const blob = new Blob([buf], { type: "audio/wav" });
-    const url = URL.createObjectURL(blob);
-    const au = new Audio(url);
-    au.onended = () => { xzPlaying = false; URL.revokeObjectURL(url); };
-    au.play().catch(() => { xzPlaying = false; });
-    addLog(`🔊 干杯助手回复中… (${(dataLen / (sr * 2)).toFixed(1)}s)`);
-  } catch (e) {
-    xzPlaying = false;
-    addLog("❌ 干杯助手回复播放失败: " + e.message);
-  }
-  xzReplyLen = 0; xzReplyChunks = [];
+  // TTS 结束：本段对话播放完毕，重置时钟（下次对话重新起播）
+  xzNextStart = 0;
+  xzPlayStarted = false;
 }
 
 xzBtn.addEventListener("pointerdown", (e) => { e.preventDefault(); xzStart(); });
