@@ -33,6 +33,7 @@ static bool  g_horn = false;      // 鸣笛状态
 
 // 档位对应的速度上限（km/h）
 static const int GEAR_SPEED_MAX[] = {0, 10, 15, 20, 25};
+static const int R_SPEED_MAX = 6;  // R 档倒车速度上限（km/h），慢速安全
 
 // 上行状态上报周期
 static const unsigned long STAT_INTERVAL_MS = 100;  // 10Hz
@@ -67,11 +68,17 @@ static int adc_to_throttle_pct(void) {
   return (int)((long)hal_analog_throttle() * 100 / 1023);
 }
 
+static int gear_max_speed(void) {
+  if (g_gear == -1) return R_SPEED_MAX;   // R 档
+  return GEAR_SPEED_MAX[g_gear];
+}
+
 static int estimate_speed(void) {
   // 无轮速传感器前，用油门 × 档位上限估算
   int thr = adc_to_throttle_pct();
-  long v = (long)thr * GEAR_SPEED_MAX[g_gear] * 70 / 10000;
-  return (int)v;
+  int dir = (g_gear == -1) ? -1 : 1;   // R 档反向
+  long v = (long)thr * gear_max_speed() * 70 / 10000;
+  return (int)(v * dir);
 }
 
 static int adc_to_voltage_x10(void) {
@@ -108,7 +115,7 @@ static void handle_command(const char* c, const char* p) {
   }
   if (strcmp(c, cmd::GEAR) == 0) {
     int v = atoi(p);
-    if (v < 1 || v > 4) { send_ack_err("INVALID_ARG"); return; }
+    if (!(v == -1 || (v >= 1 && v <= 4))) { send_ack_err("INVALID_ARG"); return; }  // -1=R倒车, 1-4前进
     g_gear = v;
     send_ack_ok();
     return;
@@ -216,9 +223,11 @@ static void drive_motor(void) {
     return;
   }
   // 档位限速：油门百分比 × 档位上限比例
-  int capped = thr * GEAR_SPEED_MAX[g_gear] / 25;
+  int capped = thr * gear_max_speed() / 25;
   if (capped > 100) capped = 100;
-  hal_set_motor((uint8_t)capped);
+  // R 档倒车：负值（双向电调反向）
+  if (g_gear == -1) capped = -capped;
+  hal_set_motor(capped);
 }
 
 // ================= 入口 =================

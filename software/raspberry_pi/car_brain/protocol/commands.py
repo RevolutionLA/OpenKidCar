@@ -5,7 +5,7 @@
 """
 
 # ---- 下行命令（大脑 -> 小脑）----
-GEAR = "GEAR"       # 参数：1-4 速度档位
+GEAR = "GEAR"       # 参数：-1(R倒车) 或 1-4 速度档位
 LIGHT = "LIGHT"     # 参数：ON / OFF 前大灯
 STRIP = "STRIP"     # 参数：模式,颜色,亮度 RGB灯带
 TURN = "TURN"       # 参数：L / R / OFF 转向灯

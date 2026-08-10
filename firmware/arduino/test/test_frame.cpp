@@ -126,6 +126,13 @@ void test_gear_set(void) {
   TEST_ASSERT_EQUAL_INT(3, test_get_gear());
 }
 
+void test_gear_reverse(void) {
+  test_handle_command("GEAR", "-1");   // R 倒车
+  TEST_ASSERT_EQUAL_INT(-1, test_get_gear());
+  test_handle_command("GEAR", "0");    // 0 仍非法
+  TEST_ASSERT_EQUAL_INT(-1, test_get_gear());
+}
+
 void test_gear_invalid(void) {
   test_handle_command("GEAR", "5");  // 超出 1-4
   TEST_ASSERT_EQUAL_INT(2, test_get_gear());  // 保持默认
@@ -194,6 +201,7 @@ int main(void) {
   RUN_TEST(test_decode_truncated);
   // ---- 固件命令逻辑测试（来自 src/main.cpp 的测试钩子）----
   RUN_TEST(test_gear_set);
+  RUN_TEST(test_gear_reverse);
   RUN_TEST(test_gear_invalid);
   RUN_TEST(test_light_on_off);
   RUN_TEST(test_light_invalid);

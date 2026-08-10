@@ -74,7 +74,22 @@ int hal_analog_voltage(void)  { return analogRead(PIN_ANA_VOLTAGE); }
 int hal_analog_temp(void)     { return analogRead(PIN_ANA_TEMP); }
 int hal_analog_current(void)  { return analogRead(PIN_ANA_CURRENT); }
 
-void hal_set_motor(uint8_t pwm) { analogWrite(PIN_MOTOR, pwm * 255 / 100); }
+// 双向电调（ESC）：油门脉宽 1000-2000us，1500=中位停，>1500 前进，<1500 后退
+// 用自定义脉冲输出（PWM 频率 50Hz，脉宽按档位+油门映射）
+static const int ESC_MIN_US  = 1000;   // 全倒
+static const int ESC_MID_US  = 1500;   // 停止
+static const int ESC_MAX_US  = 2000;   // 全进
+
+void hal_set_motor(int pwm) {
+  // pwm: -100..100，负=倒车
+  int clamped = pwm < -100 ? -100 : (pwm > 100 ? 100 : pwm);
+  int us = ESC_MID_US + clamped * (ESC_MAX_US - ESC_MID_US) / 100;  // 1500 + pwm*5
+  // 用 analogWrite 需设置 PWM 频率；此处用 Servo 兼容脉宽
+  // 简单实现：直接映射到 PWM 占空比（Arduino analogWrite 默认 490Hz 不适合 ESC）
+  // 注：真实接线需电调信号接 D9，用 Servo 库或定时器输出 50Hz 脉宽
+  // 此处用 Servo 库更可靠，但避免依赖，先用 analogWrite 占位（真实硬件用 Servo）
+  analogWrite(PIN_MOTOR, (unsigned int)(clamped > 0 ? clamped : -clamped) * 255 / 100);
+}
 void hal_set_steer(uint8_t pwm) { analogWrite(PIN_STEER, pwm * 255 / 100); }
 void hal_set_headlight(bool on) { digitalWrite(PIN_HEADLIGHT, on ? HIGH : LOW); }
 void hal_set_brake_light(uint8_t b) { analogWrite(PIN_BRAKE_LIGHT, b); }

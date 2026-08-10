@@ -193,9 +193,10 @@ class TwinCore:
             self.brain.remote_ebrake()
             self.log("📱 家长远程急刹！")
         elif t == "gear":
-            # 家长远程设置档位（F-DRV-04 / F-APP-01）
-            self.brain.set_gear(int(msg["value"]))
-            self.log(f"📱 家长设置档位 → D{msg['value']}")
+            # 家长远程设置档位（F-DRV-04 / F-APP-01），-1=R倒车
+            g = int(msg["value"])
+            self.brain.set_gear(g)
+            self.log(f"📱 家长设置档位 → {'R' if g == -1 else 'D' + str(g)}")
         elif t == "seat":
             # 家长远程上下电（F-PWR-01/02 模拟）
             self.ceb.set_seat(bool(msg["value"]))
@@ -253,15 +254,20 @@ class TwinCore:
         self._emit_state()
 
     def _update_gps(self):
-        """模拟 GPS：速度越大移动越快，行驶中缓慢右转形成轨迹。"""
+        """模拟 GPS：速度越大移动越快，行驶中缓慢右转形成轨迹。倒车（负速度）反向移动。"""
         speed = self.ceb.speed
         dt = 0.02
-        dist = speed * dt  # 米
-        if speed > 0.1:
-            self.gps_heading = (self.gps_heading + 0.9 * (speed / 25.0)) % 360.0
+        dist = speed * dt  # 米（负=倒车）
+        if abs(speed) > 0.1:
+            # 前进右转，倒车反向（heading + 180°）
+            turn = self.gps_heading + (180.0 if speed < 0 else 0.0)
+            self.gps_heading = (self.gps_heading + 0.9 * (abs(speed) / 25.0)) % 360.0
+            move_heading = turn
+        else:
+            move_heading = self.gps_heading
         m_per_deg = 111320.0
-        self.gps_lat += dist * math.cos(math.radians(self.gps_heading)) / m_per_deg
-        self.gps_lng += dist * math.sin(math.radians(self.gps_heading)) / (
+        self.gps_lat += dist * math.cos(math.radians(move_heading)) / m_per_deg
+        self.gps_lng += dist * math.sin(math.radians(move_heading)) / (
             m_per_deg * math.cos(math.radians(self.gps_lat))
         )
         # 记录轨迹历史（轨迹回放用，去重：车不动不重复记）

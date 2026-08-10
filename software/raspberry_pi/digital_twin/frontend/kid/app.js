@@ -67,12 +67,16 @@ const ticks = $("ticks");
 })();
 
 function updateSpeed(kmh, max) {
-  const pct = Math.min(100, (kmh / max) * 100) / 100;
-  $("speed").textContent = Math.round(kmh);
+  // 支持倒车：负速度时数字显示负值，指针回摆到 0
+  const reverse = kmh < 0;
+  const abs = Math.abs(kmh);
+  const pct = Math.min(100, (abs / max) * 100) / 100;
+  $("speed").textContent = Math.round(kmh);   // 负数直接显示，如 -3
   const ring = document.querySelector(".ring-val");
-  const dash = RING_ARC * pct;                       // 弧长 0..433.5
+  const dash = RING_ARC * pct;
   ring.style.strokeDasharray = `${dash.toFixed(1)} ${(RING_CIRC - dash).toFixed(1)}`;
-  const angle = pct * 270 - 135;                     // 指针 -135°..+135°
+  // 倒车指针回摆（镜像到负侧），前进正常
+  const angle = (reverse ? -pct : pct) * 270 - 135;
   needle.style.transform = `rotate(${angle}deg)`;
 }
 
@@ -138,7 +142,8 @@ const lamps = {
 };
 
 function render(s) {
-  const max = { 1: 10, 2: 15, 3: 20, 4: 25 }[s.gear] || 15;
+  const gearMax = { 1: 10, 2: 15, 3: 20, 4: 25 };
+  const max = s.gear === -1 ? 6 : (gearMax[s.gear] || 15);   // R=6km/h
   updateSpeed(s.speed, max);
   updateEngine(s.throttle, s.speed, s.mute, s.online, s.ebrk, s.brake);
 
@@ -163,10 +168,13 @@ function render(s) {
   setLamp(lamps.ebrk, s.ebrk);
   setLamp(lamps.mute, s.mute);
 
+  // 档位高亮（R=-1）
   document.querySelectorAll(".gear").forEach((b) =>
     b.classList.toggle("active", parseInt(b.dataset.g) === s.gear));
-  $("hud-gear").textContent = s.gear;
-  $("speed-gear").textContent = "D" + s.gear;
+  // 档位显示：-1 显示 R，1-4 显示 D1-D4
+  const gearLabel = s.gear === -1 ? "R" : "D" + s.gear;
+  $("hud-gear").textContent = gearLabel;
+  $("speed-gear").textContent = gearLabel;
 
   $("chip-brain").classList.toggle("on", s.online);
   $("chip-cere").classList.toggle("on", s.online);

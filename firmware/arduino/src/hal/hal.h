@@ -45,7 +45,7 @@ int hal_analog_temp(void);      // A4 电池仓温度（NTC）
 int hal_analog_current(void);   // A5 电机电流
 
 // ---- 输出：执行器 ----
-void hal_set_motor(uint8_t pwm);            // D9 电机油门 0-100
+void hal_set_motor(int pwm);                // D9 电机油门 -100..100（负=倒车，双向电调）
 void hal_set_steer(uint8_t pwm);            // D10 转向
 void hal_set_headlight(bool on);            // D2 前大灯
 void hal_set_brake_light(uint8_t b);        // D3 刹车灯 0-255

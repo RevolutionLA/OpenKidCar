@@ -116,7 +116,7 @@ class Brain:
 
     # ================= 主动命令（供上层调用）=================
     def set_gear(self, gear: int):
-        if 1 <= gear <= 4:
+        if -1 <= gear <= 4:   # -1 = R 倒车，1-4 = 前进档
             self.gear = gear
             self._send(C.GEAR, str(gear))
 

@@ -92,7 +92,7 @@ body::before {
 /* 家长远程设档位 */
 .gear-set { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
 .gs-label { font-size: 10px; color: var(--dim); letter-spacing: 1px; display: block; margin-bottom: 5px; }
-.gear-btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.gear-btns { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
 .gbtn {
   padding: 8px 0; border-radius: 8px;
   border: 1px solid var(--line); background: var(--panel-2);

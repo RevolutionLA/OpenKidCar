@@ -43,7 +43,7 @@ function render(s) {
 
   // 车辆
   $("p-speed").textContent = Math.round(s.speed);
-  $("p-gear").textContent = "D" + s.gear;
+  $("p-gear").textContent = s.gear === -1 ? "R" : "D" + s.gear;   // R=-1
   $("p-throttle").textContent = Math.round(s.throttle) + "%";
   const ebrkEl = $("p-ebrk");
   ebrkEl.textContent = s.ebrk ? "触发！" : "正常";

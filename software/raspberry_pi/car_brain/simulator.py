@@ -90,6 +90,7 @@ class Pipe:
 
 # ============ 小脑引擎 ============
 GEAR_SPEED_MAX = {1: 10, 2: 15, 3: 20, 4: 25}
+R_SPEED_MAX = 6   # R 档倒车速度上限（km/h），慢速安全
 
 
 class CerebellumSim:
@@ -177,7 +178,9 @@ class CerebellumSim:
             self.mute = (params == "ON")
             self._ack()
         elif cmd == C.GEAR:
-            self.gear = max(1, min(4, int(params)))
+            v = int(params)
+            if v == -1 or (1 <= v <= 4):   # -1=R倒车, 1-4前进
+                self.gear = v
             self._ack()
         elif cmd == C.TURN:
             self.turn = params if params in ("L", "R", "OFF") else " "
@@ -198,13 +201,19 @@ class CerebellumSim:
 
     def _report(self):
         # 速度物理（积分式）：油门加速逼近目标，刹车/急刹减速
-        max_spd = GEAR_SPEED_MAX.get(self.gear, 10)
+        # 前进 R 档目标为负（倒车）
+        reverse = (self.gear == -1)
+        max_spd = R_SPEED_MAX if reverse else GEAR_SPEED_MAX.get(self.gear, 10)
+        target_dir = -1 if reverse else 1
         if self.ebrk or self.brake > 10:
-            # 刹车越深，减速越快；急刹立即停
+            # 刹车越深，减速越快；急刹立即停（按方向钳位）
             decel = 60 if self.ebrk else self.brake * 0.25
-            self.speed = max(0, self.speed - decel)
+            if target_dir > 0:
+                self.speed = max(0, self.speed - decel)      # 前进：刹到 0
+            else:
+                self.speed = min(0, self.speed + decel)      # 倒车：刹到 0（从负回升）
         else:
-            target = self.throttle * max_spd / 100
+            target = target_dir * self.throttle * max_spd / 100   # 负目标=倒车
             self.speed += (target - self.speed) * 0.12   # 平滑逼近目标速度
         self.motor = 0 if (self.ebrk or self.brake > 10) else self.throttle
         self.brake_light = 255 if (self.ebrk or self.brake > 10) else 0

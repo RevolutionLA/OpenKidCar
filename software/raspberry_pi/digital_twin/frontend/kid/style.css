@@ -161,7 +161,7 @@ body::before {
 .blk-label small { letter-spacing: 1px; }
 
 /* 档位 */
-.gear-btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.gear-btns { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
 .gear {
   padding: 8px 0; border-radius: 8px;
   border: 1px solid var(--line); background: var(--panel-2);

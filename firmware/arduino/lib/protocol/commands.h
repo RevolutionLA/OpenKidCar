@@ -9,7 +9,7 @@
 namespace cmd {
 
 // ---- 下行命令（大脑 -> 小脑）----
-static const char* const GEAR   = "GEAR";    // 参数：1-4 速度档位
+static const char* const GEAR   = "GEAR";    // 参数：-1(R倒车) 或 1-4 速度档位
 static const char* const LIGHT  = "LIGHT";   // 参数：ON / OFF 前大灯
 static const char* const STRIP  = "STRIP";   // 参数：模式,颜色,亮度 RGB灯带
 static const char* const TURN   = "TURN";    // 参数：L / R / OFF 转向灯

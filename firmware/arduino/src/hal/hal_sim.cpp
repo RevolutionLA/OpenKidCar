@@ -104,7 +104,7 @@ int hal_analog_temp(void)     { return 300; }   // 模拟 30℃（标定后替�
 int hal_analog_current(void)  { return 100; }   // 模拟 2A（标定后替换）
 
 // ---- 输出：打印到 stderr（不污染 stdout 协议流）----
-void hal_set_motor(uint8_t pwm) { fprintf(stderr, "[SIM] motor PWM=%u\n", pwm); }
+void hal_set_motor(int pwm) { fprintf(stderr, "[SIM] motor PWM=%d\n", pwm); }
 void hal_set_steer(uint8_t pwm) { fprintf(stderr, "[SIM] steer  PWM=%u\n", pwm); }
 void hal_set_headlight(bool on) { fprintf(stderr, "[SIM] headlight=%s\n", on ? "ON" : "OFF"); }
 void hal_set_brake_light(uint8_t b) { fprintf(stderr, "[SIM] brake_light=%u\n", b); }
