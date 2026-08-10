@@ -5,7 +5,8 @@
 "use strict";
 
 const $ = (id) => document.getElementById(id);
-const wsUrl = (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/ws";
+const wsUrl = (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/ws"
+  + (window.OPENKIDCAR_TOKEN ? "?token=" + encodeURIComponent(window.OPENKIDCAR_TOKEN) : "");
 const HOME = { lat: 39.9087, lng: 116.3975 };
 
 // ================= WebSocket =================
@@ -48,6 +49,8 @@ function render(s) {
   const ebrkEl = $("p-ebrk");
   ebrkEl.textContent = s.ebrk ? "触发！" : "正常";
   ebrkEl.className = s.ebrk ? "danger" : "safe";
+  // 急刹时显示"解除急刹"按钮
+  $("btn-release").classList.toggle("hidden", !s.ebrk);
   // 电源（坐垫/上下电）
   const seatEl = $("p-seat");
   seatEl.textContent = s.seat ? "运行" : "关闭";
@@ -259,12 +262,15 @@ $("btn-call").addEventListener("click", () => {
 });
 $("btn-hangup").addEventListener("click", stopVideoCall);
 
-// ================= 远程急刹 =================
+// ================= 远程急刹 / 解除急刹 =================
 $("btn-ebrk").addEventListener("click", () => {
   send({ type: "remote_ebrk" });
   const btn = $("btn-ebrk");
   btn.style.transform = "scale(0.98)";
   setTimeout(() => (btn.style.transform = ""), 120);
+});
+$("btn-release").addEventListener("click", () => {
+  send({ type: "release_ebrk" });
 });
 
 // ================= 家长远程设档位（F-DRV-04 / F-APP-01） =================

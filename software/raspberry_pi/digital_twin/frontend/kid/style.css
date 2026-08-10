@@ -77,6 +77,8 @@ body::before {
 .chip .dot.amber { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
 .chip.on .dot { background: var(--green); box-shadow: 0 0 10px var(--green); }
 .chip.on { color: var(--text); border-color: rgba(52,211,153,0.4); }
+.chip.real { color: var(--amber); border-color: rgba(245,158,11,0.4); }
+.chip.real .dot { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
 .clock { font-family: var(--font-num); font-size: 16px; color: var(--cyan); }
 
 /* ============ 主布局（一屏网格） ============ */

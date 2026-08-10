@@ -133,6 +133,11 @@ class Brain:
         self.ebrk = True
         self._send(C.EBRK, "ON")
 
+    def release_ebrake(self):
+        """APP 解除急刹（仅家长端授权）。"""
+        self.ebrk = False
+        self._send(C.EBRK, "OFF")
+
     def set_strip(self, mode: int, color: int = 0xFFFFFF, brightness: int = 100):
         """RGB 灯带：mode(0 关/1 常亮/2 呼吸...), color(0xRRGGBB), brightness(0-255)。"""
         self._send(C.STRIP, f"{mode},{color:06X},{brightness}")

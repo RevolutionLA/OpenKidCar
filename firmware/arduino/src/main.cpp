@@ -31,6 +31,11 @@ static bool  g_brake = false;     // 制动状态
 static bool  g_ebrk = false;      // 急刹状态
 static bool  g_horn = false;      // 鸣笛状态
 
+// 失联失效安全（P1-2）：超过该毫秒数未收到大脑任何命令 → 自动降速停车
+static const unsigned long HEARTBEAT_TIMEOUT_MS = 3000;  // 3 秒
+static unsigned long g_last_cmd_ms = 0;   // 上次收到命令的时间
+static bool g_failsafe = false;           // 是否处于失效安全降速
+
 // 档位对应的速度上限（km/h）
 static const int GEAR_SPEED_MAX[] = {0, 10, 15, 20, 25};
 static const int R_SPEED_MAX = 6;  // R 档倒车速度上限（km/h），慢速安全
@@ -173,12 +178,21 @@ static void handle_command(const char* c, const char* p) {
     return;
   }
   if (strcmp(c, cmd::EBRK) == 0) {
-    // 最高优先级急刹：断电 + 刹车灯 + 停止动力
-    g_ebrk = true;
-    g_brake = true;
-    hal_set_motor(0);
-    hal_set_brake_light(255);
-    send_ack_ok();
+    if (strcmp(p, "OFF") == 0) {
+      // 解除急刹：动力先归零，等下次油门才动，防突然窜出
+      g_ebrk = false;
+      g_brake = false;
+      hal_set_motor(0);
+      hal_set_brake_light(0);
+      send_ack_ok();
+    } else {
+      // 最高优先级急刹：断电 + 刹车灯 + 停止动力
+      g_ebrk = true;
+      g_brake = true;
+      hal_set_motor(0);
+      hal_set_brake_light(255);
+      send_ack_ok();
+    }
     return;
   }
   if (strcmp(c, cmd::STATUS) == 0) {
@@ -218,6 +232,12 @@ static bool poll_button(Button* b) {
 // ================= 油门动力输出 =================
 static void drive_motor(void) {
   int thr = adc_to_throttle_pct();
+  // 失效安全（P1-2）：超过 3 秒未收到大脑命令 → 自动停车
+  if (hal_millis() - g_last_cmd_ms > HEARTBEAT_TIMEOUT_MS) {
+    g_failsafe = true;
+    hal_set_motor(0);
+    return;
+  }
   if (g_ebrk || g_brake) {
     hal_set_motor(0);
     return;
@@ -261,6 +281,8 @@ void loop() {
       g_line[g_line_len] = '\0';
       char cmd_buf[32], params_buf[96];
       if (frame_decode(g_line, cmd_buf, sizeof(cmd_buf), params_buf, sizeof(params_buf))) {
+        g_last_cmd_ms = hal_millis();   // 收到任意有效帧 = 心跳（失效安全用）
+        g_failsafe = false;
         handle_command(cmd_buf, params_buf);
       }
       g_line_len = 0;

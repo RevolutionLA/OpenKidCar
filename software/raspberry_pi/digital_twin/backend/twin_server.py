@@ -45,6 +45,18 @@ FRONTEND = os.path.normpath(
 KID_DIR = os.path.join(FRONTEND, "kid")
 PARENT_DIR = os.path.join(FRONTEND, "parent")
 
+# ---- 访问鉴权（P0-2）：共享 token，防局域网任意设备遥控载人车 ----
+# token 从环境变量注入，不入库不进前端源码。缺省用随机值（前端需先取 token）。
+AUTH_TOKEN = os.environ.get("OPENKIDCAR_TOKEN", "").strip()
+
+
+def check_token(request) -> bool:
+    """校验请求携带的 token（header 或 query）。无 token 时若未配置则放行（开发模式）。"""
+    if not AUTH_TOKEN:
+        return True  # 未配置 token → 开发/局域网模式放行（蓝军建议默认开启，此处保守）
+    t = request.headers.get("X-Auth-Token", "") or request.query.get("token", "")
+    return t == AUTH_TOKEN
+
 
 class RealCerebellum:
     """真实小脑适配器：命令发给 Arduino，从大脑收到的 STAT 解析状态。
@@ -74,6 +86,7 @@ class RealCerebellum:
         self.current = 0.0
         self.temp = 32
         self.steer = 0.0
+        self.seat = False   # 上下电状态（真实模式暂由继电器控制，占位防崩溃）
 
     # ---------- 命令（发给 Arduino，决策类） ----------
     def press_button(self, name):
@@ -94,6 +107,10 @@ class RealCerebellum:
     def set_horn(self, on):
         self.horn = bool(on)
         self.brain.set_horn(on)
+
+    def set_seat(self, on):
+        """上下电（真实模式占位）：暂只记录状态，防崩溃。真车上下电由继电器/电源管理。"""
+        self.seat = bool(on)
 
     def tick(self):
         """真实模式下无需 tick（Arduino 自己跑循环上报状态）。"""
@@ -132,6 +149,7 @@ class TwinCore:
             self.bp.peer, self.cp.peer = self.cp, self.bp
             self.ceb = CerebellumSim(self.cp)          # 小脑（虚拟）
             self.brain = Brain(SerialLink(self.bp))    # 大脑（真实决策）
+        self.mode = "real" if real_serial else "sim"   # 运行模式：real=真实硬件, sim=仿真
         self.brain.on_event = self._on_brain_event
         self.brain.start()
 
@@ -192,6 +210,10 @@ class TwinCore:
         if t == "remote_ebrk":
             self.brain.remote_ebrake()
             self.log("📱 家长远程急刹！")
+        elif t == "release_ebrk":
+            # 解除急刹（仅家长端授权）
+            self.brain.release_ebrake()
+            self.log("📱 家长解除急刹")
         elif t == "gear":
             # 家长远程设置档位（F-DRV-04 / F-APP-01），-1=R倒车
             g = int(msg["value"])
@@ -287,6 +309,7 @@ class TwinCore:
     def _state(self):
         c = self.ceb
         return {
+            "mode": self.mode,   # "sim" 仿真 / "real" 真实硬件
             "online": self.brain.cerebellum_online,
             "speed": c.speed,
             "throttle": c.throttle,
@@ -439,6 +462,8 @@ async def _ws_loop(ws, clients, command_handler, relay_to_peer):
 
 
 async def ws_kid_handler(request):
+    if not check_token(request):
+        return web.Response(status=401, text="Unauthorized")
     ws = web.WebSocketResponse()
     await ws.prepare(request)
     return await _ws_loop(ws, core.kid_clients, core.handle_kid_command,
@@ -446,6 +471,8 @@ async def ws_kid_handler(request):
 
 
 async def ws_parent_handler(request):
+    if not check_token(request):
+        return web.Response(status=401, text="Unauthorized")
     ws = web.WebSocketResponse()
     await ws.prepare(request)
     return await _ws_loop(ws, core.parent_clients, core.handle_parent_command,
@@ -473,7 +500,10 @@ async def no_cache(request, handler):
 async def control_handler(request):
     """接收干杯助手 MCP 工具的控制命令，调用大脑执行。
     body: {"action": "light"|"strip"|"mute"|"gear"|"horn"|"ebrk", "value": ...}
+    需带 token（X-Auth-Token header 或 ?token=）。
     """
+    if not check_token(request):
+        return web.json_response({"ok": False, "error": "unauthorized"}, status=401)
     try:
         body = await request.json()
     except Exception:
@@ -499,10 +529,17 @@ async def control_handler(request):
     return web.json_response({"ok": True})
 
 
+async def token_js(request):
+    """把鉴权 token 注入前端（window.OPENKIDCAR_TOKEN），供 WS 握手 / API 调用。"""
+    js = f"window.OPENKIDCAR_TOKEN = {json.dumps(AUTH_TOKEN)};\n"
+    return web.Response(text=js, content_type="application/javascript")
+
+
 def build_kid_app():
     app = web.Application(middlewares=[no_cache])
     app.router.add_get("/ws", ws_kid_handler)
     app.router.add_get("/", lambda r: web.FileResponse(os.path.join(KID_DIR, "index.html")))
+    app.router.add_get("/token.js", token_js)
     app.router.add_static("/static", KID_DIR)
     # 本地控制 API（供干杯助手 MCP 工具调用大脑）
     app.router.add_post("/api/control", control_handler)
@@ -513,6 +550,7 @@ def build_parent_app():
     app = web.Application(middlewares=[no_cache])
     app.router.add_get("/ws", ws_parent_handler)
     app.router.add_get("/", lambda r: web.FileResponse(os.path.join(PARENT_DIR, "index.html")))
+    app.router.add_get("/token.js", token_js)
     app.router.add_static("/static", PARENT_DIR)
     return app
 

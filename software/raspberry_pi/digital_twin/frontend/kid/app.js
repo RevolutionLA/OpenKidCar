@@ -6,7 +6,8 @@
 "use strict";
 
 const $ = (id) => document.getElementById(id);
-const wsUrl = (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/ws";
+const wsUrl = (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/ws"
+  + (window.OPENKIDCAR_TOKEN ? "?token=" + encodeURIComponent(window.OPENKIDCAR_TOKEN) : "");
 const log = $("log");
 
 function addLog(text) {
@@ -179,6 +180,9 @@ function render(s) {
   $("chip-brain").classList.toggle("on", s.online);
   $("chip-cere").classList.toggle("on", s.online);
   $("btn-ebrk").classList.toggle("on", s.ebrk);
+  // 运行模式标注（P2-3）：真实模式油门/刹车/转向由物理踏板控制，仅显示
+  $("mode-text").textContent = s.mode === "real" ? "真机" : "仿真";
+  $("chip-mode").classList.toggle("real", s.mode === "real");
 
   syncSwitch($("sw-light"), s.light);
   syncSwitch($("sw-mute"), s.mute);

@@ -117,6 +117,30 @@ void test_decode_truncated(void) {
   TEST_ASSERT_FALSE(ok);
 }
 
+// ---- 串口鲁棒性（P2-2）：噪声/垃圾输入不崩溃、能恢复 ----
+void test_decode_noise_robust(void) {
+  char cmd[32], params[64];
+  // 纯噪声字节
+  const char* noise = "\x01\x02\x03\xff\x00@@@";
+  bool ok = frame_decode(noise, cmd, sizeof(cmd), params, sizeof(params));
+  TEST_ASSERT_FALSE(ok);  // 不崩溃，拒绝
+  // 单独一帧正常解出（loop 层用缓冲按 \n 切行，粘连由上层处理）
+  const char* one = "#PING;CK:1F\n";
+  ok = frame_decode(one, cmd, sizeof(cmd), params, sizeof(params));
+  TEST_ASSERT_TRUE(ok);
+  // 帧前夹噪声（脏数据在前，应拒绝整行）
+  const char* noisy = "garbage#LIGHT:ON;CK:B7\n";
+  ok = frame_decode(noisy, cmd, sizeof(cmd), params, sizeof(params));
+  TEST_ASSERT_FALSE(ok);
+  // 半帧（缺一半）
+  const char* half = "#LIGHT:ON;CK:B7";  // 无换行结尾
+  ok = frame_decode(half, cmd, sizeof(cmd), params, sizeof(params));
+  TEST_ASSERT_TRUE(ok);
+  // 未知命令（handle_command 不应崩溃）
+  test_handle_command("FOO", "BAR");
+  TEST_ASSERT_EQUAL_INT(2, test_get_gear());  // 状态不变
+}
+
 // ============================================================
 // 固件命令逻辑测试（src/main.cpp 的测试钩子，UNIT_TEST 时暴露）
 // 验证 handle_command 对 GEAR/LIGHT/STRIP/TURN/MUTE/EBRK 等命令的处理
@@ -182,6 +206,15 @@ void test_ebrk(void) {
   TEST_ASSERT_TRUE(test_get_brake());  // 急刹同时强制刹车
 }
 
+void test_ebrk_release(void) {
+  // 先急刹再解除
+  test_handle_command("EBRK", "ON");
+  TEST_ASSERT_TRUE(test_get_ebrk());
+  test_handle_command("EBRK", "OFF");
+  TEST_ASSERT_FALSE(test_get_ebrk());
+  TEST_ASSERT_FALSE(test_get_brake());  // 解除后刹车也松开
+}
+
 void test_unknown(void) {
   test_handle_command("FOO", "BAR");
   TEST_ASSERT_EQUAL_INT(2, test_get_gear());  // 不崩溃、状态不变
@@ -199,6 +232,7 @@ int main(void) {
   RUN_TEST(test_decode_missing_frame_header);
   RUN_TEST(test_roundtrip);
   RUN_TEST(test_decode_truncated);
+  RUN_TEST(test_decode_noise_robust);
   // ---- 固件命令逻辑测试（来自 src/main.cpp 的测试钩子）----
   RUN_TEST(test_gear_set);
   RUN_TEST(test_gear_reverse);
@@ -210,6 +244,7 @@ int main(void) {
   RUN_TEST(test_strip_off);
   RUN_TEST(test_brake);
   RUN_TEST(test_ebrk);
+  RUN_TEST(test_ebrk_release);
   RUN_TEST(test_unknown);
   return UNITY_END();
 }
