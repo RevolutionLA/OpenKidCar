@@ -5,6 +5,21 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) [![PRD](https://img.shields.io/badge/PRD-干杯一号-blue)](docs/product_requirements.md)
 
 <p align="center">
+  <img src="media/宣传物料/干杯一号效果图.png" alt="干杯一号效果图" width="85%">
+</p>
+
+<p align="center">
+  <img src="media/宣传物料/干杯一号三视图.png" alt="干杯一号三视图" width="70%">
+  <br>
+  <sub>科幻赛车风格 · 红金配色 · 为 3 岁儿子亲手打造</sub>
+</p>
+
+<p align="center">
+  <a href="media/宣传物料/干杯一号爆炸图.png">🔍 查看爆炸图</a> ·
+  <a href="media/宣传物料/OpenKidCar宣传片.mp4">🎬 观看宣传片</a>
+</p>
+
+<p align="center">
   <img src="media/images/架构图示.png" alt="OpenKidCar 系统架构图示" width="100%">
 </p>
 
@@ -283,6 +298,7 @@ OpenKidCar/
 │   └── body_design/       # 车身三维模型
 ├── media/
 │   ├── images/            # 图片与视频素材
+│   ├── 宣传物料/           # 效果图/三视图/爆炸图/宣传片
 │   ├── prototype/         # 原型照片与视频
 │   └── videos/            # 项目视频
 └── logs/
