@@ -138,7 +138,7 @@
 | 编号 | 状态 | 修复说明 |
 |---|---|---|
 | P0-1 急刹可解除 | ✅ 已修复 | 固件 `EBRK:OFF` 分支、大脑 `release_ebrake()`、家长端"解除急刹"按钮；固件测试 `test_ebrk_release` |
-| P0-2 零鉴权 | ✅ 已修复 | token 鉴权：环境变量 `OPENKIDCAR_TOKEN`；WS 握手 + `/api/control` 校验；前端 `token.js` 注入；桥接带 token |
+| P0-2 零鉴权 | ✅ 已重做（密码门） | 方向①密码门：`OPENKIDCAR_PASSWORD` 密码登录 + session cookie；未设密码拒绝启动；token 不下发前端/不走 URL；小车端 8000 仅本机监听。见 recheck_1 第五节 |
 | P0-3 上下电崩溃 | ✅ 已修复 | `RealCerebellum` 补 `set_seat`（占位不崩溃）+ `seat` 字段 |
 | P1-1 真实状态标定 | ⏳ 待真机 | 上板后按 `hardware_io_map.md` 重新标定 ADC |
 | P1-2 失联失效安全 | ✅ 已修复 | 小脑看门狗：3 秒未收命令自动停车（`HEARTBEAT_TIMEOUT_MS`）|

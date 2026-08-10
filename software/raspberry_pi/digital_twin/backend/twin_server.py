@@ -45,17 +45,71 @@ FRONTEND = os.path.normpath(
 KID_DIR = os.path.join(FRONTEND, "kid")
 PARENT_DIR = os.path.join(FRONTEND, "parent")
 
-# ---- 访问鉴权（P0-2）：共享 token，防局域网任意设备遥控载人车 ----
-# token 从环境变量注入，不入库不进前端源码。缺省用随机值（前端需先取 token）。
-AUTH_TOKEN = os.environ.get("OPENKIDCAR_TOKEN", "").strip()
+# ---- 访问鉴权（P0-2 重做：密码门，方向①）----
+# 家长端 8001 需输入密码登录，session cookie 鉴权；token 只在服务端，不下发前端。
+# 真车部署**强制**配置密码，未配置则拒绝启动（而非放行）。
+# 开发模式用显式开关 --dev-allow-no-password 才允许无密码放行。
+AUTH_PASSWORD = os.environ.get("OPENKIDCAR_PASSWORD", "").strip()
+_DEV_ALLOW_NO_PASSWORD = "--dev-allow-no-password" in sys.argv
+_SESSIONS = set()          # 已登录 session（内存，重启失效，够用）
+
+
+def _require_password() -> bool:
+    """是否必须密码（真车必须）。开发模式显式开关才可免密码。"""
+    if AUTH_PASSWORD:
+        return True
+    if _DEV_ALLOW_NO_PASSWORD:
+        return False
+    return True   # 默认视为生产：必须配置密码
+
+
+def check_auth(request) -> bool:
+    """校验 session cookie（家长端页面 / WS / API）。"""
+    if not _require_password():
+        return True
+    sid = request.cookies.get("okc_session", "")
+    return sid in _SESSIONS
+
+
+async def login_handler(request):
+    """密码登录：POST {password} → 成功设 session cookie。"""
+    try:
+        body = await request.json()
+    except Exception:
+        return web.json_response({"ok": False, "error": "bad json"}, status=400)
+    if not _require_password():
+        return web.json_response({"ok": True, "skip": True})
+    if body.get("password") == AUTH_PASSWORD:
+        import uuid
+        sid = uuid.uuid4().hex
+        _SESSIONS.add(sid)
+        resp = web.json_response({"ok": True})
+        resp.set_cookie("okc_session", sid, httponly=True, samesite="Lax", max_age=3600 * 8)
+        return resp
+    return web.json_response({"ok": False, "error": "wrong password"}, status=401)
+
+
+def require_auth_middleware():
+    """给需要鉴权的 app 加中间件：未登录访问页面/API 返回 401。"""
+    @web.middleware
+    async def auth_mw(request, handler):
+        if request.path in ("/login", "/token.js", "/static", "/favicon.ico") or \
+           request.path.startswith("/static/"):
+            return await handler(request)
+        # 页面类：未登录时返回登录页（不泄露内容）
+        if not check_auth(request):
+            if request.path == "/":
+                # 返回登录页（家长端内置）
+                login_html = "<!doctype html><html><body style='background:#070b12;color:#dbe7f3;font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh'><form id='f' style='text-align:center'><h2>干杯一号 · 家长登录</h2><input id='pw' type='password' placeholder='请输入密码' style='padding:10px;margin:10px;border-radius:8px'><br><button type='submit' style='padding:10px 30px;border-radius:8px'>进入</button><div id='err' style='color:#f87171;font-size:12px;margin-top:8px'></div></form><script>f.onsubmit=async e=>{e.preventDefault();let r=await fetch('/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw.value})});let d=await r.json();if(d.ok){location.reload()}else{err.textContent='密码错误'}};</script></body></html>"
+                return web.Response(text=login_html, content_type="text/html")
+            return web.Response(status=401, text="Unauthorized")
+        return await handler(request)
+    return auth_mw
 
 
 def check_token(request) -> bool:
-    """校验请求携带的 token（header 或 query）。无 token 时若未配置则放行（开发模式）。"""
-    if not AUTH_TOKEN:
-        return True  # 未配置 token → 开发/局域网模式放行（蓝军建议默认开启，此处保守）
-    t = request.headers.get("X-Auth-Token", "") or request.query.get("token", "")
-    return t == AUTH_TOKEN
+    """兼容旧调用：密码门下改用 check_auth。保留为 check_auth 别名。"""
+    return check_auth(request)
 
 
 class RealCerebellum:
@@ -529,17 +583,12 @@ async def control_handler(request):
     return web.json_response({"ok": True})
 
 
-async def token_js(request):
-    """把鉴权 token 注入前端（window.OPENKIDCAR_TOKEN），供 WS 握手 / API 调用。"""
-    js = f"window.OPENKIDCAR_TOKEN = {json.dumps(AUTH_TOKEN)};\n"
-    return web.Response(text=js, content_type="application/javascript")
-
 
 def build_kid_app():
+    # 小车端默认仅本地（127.0.0.1），不对外暴露；仅干杯助手桥接本机调用
     app = web.Application(middlewares=[no_cache])
     app.router.add_get("/ws", ws_kid_handler)
     app.router.add_get("/", lambda r: web.FileResponse(os.path.join(KID_DIR, "index.html")))
-    app.router.add_get("/token.js", token_js)
     app.router.add_static("/static", KID_DIR)
     # 本地控制 API（供干杯助手 MCP 工具调用大脑）
     app.router.add_post("/api/control", control_handler)
@@ -547,16 +596,26 @@ def build_kid_app():
 
 
 def build_parent_app():
-    app = web.Application(middlewares=[no_cache])
+    # 家长端 8001：密码门鉴权（真车必须设密码），局域网访问需先登录
+    app = web.Application(middlewares=[no_cache, require_auth_middleware()])
+    app.router.add_post("/login", login_handler)
     app.router.add_get("/ws", ws_parent_handler)
     app.router.add_get("/", lambda r: web.FileResponse(os.path.join(PARENT_DIR, "index.html")))
-    app.router.add_get("/token.js", token_js)
     app.router.add_static("/static", PARENT_DIR)
     return app
 
 
 async def main():
     global core
+    # 密码门强制（P0-2）：生产模式必须配置 OPENKIDCAR_PASSWORD，否则拒绝启动
+    if _require_password() and not AUTH_PASSWORD:
+        print("=" * 58)
+        print("  ⚠️ 未设置家长端访问密码（OPENKIDCAR_PASSWORD）")
+        print("  真车部署必须设置密码，否则拒绝启动（防局域网任意设备遥控载人车）")
+        print("  设置方法：OPENKIDCAR_PASSWORD=你的密码 python twin_server.py 8000 8001")
+        print("  仅开发测试可加 --dev-allow-no-password 临时放行")
+        print("=" * 58)
+        sys.exit(1)
     # 解析参数：--real-serial <串口> 切换真实硬件模式（默认仿真）
     real_serial = None
     if "--real-serial" in sys.argv:
@@ -587,12 +646,12 @@ async def main():
 
     kid_runner = web.AppRunner(build_kid_app())
     await kid_runner.setup()
-    kid_site = web.TCPSite(kid_runner, "0.0.0.0", kid_port)
+    kid_site = web.TCPSite(kid_runner, "127.0.0.1", kid_port)   # 小车端仅本机（P0-2）
     await kid_site.start()
 
     parent_runner = web.AppRunner(build_parent_app())
     await parent_runner.setup()
-    parent_site = web.TCPSite(parent_runner, "0.0.0.0", parent_port)
+    parent_site = web.TCPSite(parent_runner, "0.0.0.0", parent_port)  # 家长端走局域网+密码
     await parent_site.start()
 
     print("=" * 58)

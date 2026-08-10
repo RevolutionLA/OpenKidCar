@@ -5,8 +5,7 @@
 "use strict";
 
 const $ = (id) => document.getElementById(id);
-const wsUrl = (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/ws"
-  + (window.OPENKIDCAR_TOKEN ? "?token=" + encodeURIComponent(window.OPENKIDCAR_TOKEN) : "");
+const wsUrl = (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/ws";
 const HOME = { lat: 39.9087, lng: 116.3975 };
 
 // ================= WebSocket =================

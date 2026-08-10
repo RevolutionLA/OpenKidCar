@@ -142,14 +142,17 @@ cd ~/py-xiaozhi
 
 ### 4.2 启动数字孪生（连真实 Arduino）
 
-> ⚠️ 当前 `twin_server.py` 默认连模拟小脑。接真实 Arduino 需加 `--real-serial` 参数（待开发，见第 6 节）。
-
 ```bash
 cd ~/OpenKidCar/software/raspberry_pi
+# 必须先设家长端访问密码（安全）：未设密码会拒绝启动
+export OPENKIDCAR_PASSWORD=你的密码
 .venv/bin/python digital_twin/backend/twin_server.py 8000 8001 \
     --real-serial /dev/ttyACM0    # 树莓派上 Arduino 通常是 /dev/ttyACM0
-# 浏览器打开 http://<树莓派IP>:8000（小车端）、:8001（家长端）
+# 小车端 http://localhost:8000（仅本机）；家长端 http://<树莓派IP>:8001（需密码登录）
 ```
+
+> 🔐 **安全**：家长端 8001 需输入密码登录（session 鉴权）；小车端 8000 仅监听本机。
+> 真实硬件模式已支持（`--real-serial`），见第 6 节。
 
 ---
 

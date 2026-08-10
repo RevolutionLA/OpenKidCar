@@ -192,18 +192,14 @@ class XiaozhiSession:
             self._send_mcp_error(rid, str(e))
 
     async def _control_car(self, action, value):
-        """通过 HTTP 调 twin_server 的 /api/control 执行大脑控制（带 token）。"""
+        """通过 HTTP 调 twin_server 的 /api/control 执行大脑控制。
+        小车端 8000 仅监听本机（127.0.0.1），干杯助手桥接本机调用，无密码门。"""
         body = {"action": action}
         if value is not None:
             body["value"] = value
-        headers = {}
-        token = os.environ.get("OPENKIDCAR_TOKEN", "").strip()
-        if token:
-            headers["X-Auth-Token"] = token
         async with aiohttp.ClientSession() as sess:
             try:
                 async with sess.post("http://127.0.0.1:8000/api/control", json=body,
-                                     headers=headers,
                                      timeout=aiohttp.ClientTimeout(total=5)) as resp:
                     return resp.status == 200
             except Exception as e:

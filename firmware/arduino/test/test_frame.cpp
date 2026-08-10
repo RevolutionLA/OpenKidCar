@@ -132,10 +132,10 @@ void test_decode_noise_robust(void) {
   const char* noisy = "garbage#LIGHT:ON;CK:B7\n";
   ok = frame_decode(noisy, cmd, sizeof(cmd), params, sizeof(params));
   TEST_ASSERT_FALSE(ok);
-  // 半帧（缺一半）
-  const char* half = "#LIGHT:ON;CK:B7";  // 无换行结尾
+  // 半帧（帧不完整，缺校验位）：循环层应缓冲等待，frame_decode 不应执行
+  const char* half = "#LIGHT:ON;CK:";   // 帧未接收完整（缺校验值）
   ok = frame_decode(half, cmd, sizeof(cmd), params, sizeof(params));
-  TEST_ASSERT_TRUE(ok);
+  TEST_ASSERT_FALSE(ok);   // 不完整帧不执行
   // 未知命令（handle_command 不应崩溃）
   test_handle_command("FOO", "BAR");
   TEST_ASSERT_EQUAL_INT(2, test_get_gear());  // 状态不变

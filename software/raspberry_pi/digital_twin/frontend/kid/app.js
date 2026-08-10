@@ -6,8 +6,7 @@
 "use strict";
 
 const $ = (id) => document.getElementById(id);
-const wsUrl = (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/ws"
-  + (window.OPENKIDCAR_TOKEN ? "?token=" + encodeURIComponent(window.OPENKIDCAR_TOKEN) : "");
+const wsUrl = (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/ws";
 const log = $("log");
 
 function addLog(text) {
