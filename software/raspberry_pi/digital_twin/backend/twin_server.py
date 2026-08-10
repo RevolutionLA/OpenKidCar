@@ -52,6 +52,17 @@ PARENT_DIR = os.path.join(FRONTEND, "parent")
 AUTH_PASSWORD = os.environ.get("OPENKIDCAR_PASSWORD", "").strip()
 _DEV_ALLOW_NO_PASSWORD = "--dev-allow-no-password" in sys.argv
 _SESSIONS = set()          # 已登录 session（内存，重启失效，够用）
+_FAILS = {}                # 登录失败计数 {ip: {"count": n, "first": ms}}（爆破防护）
+_FAIL_WINDOW_MS = 60_000   # 1 分钟内最多 10 次失败
+
+
+def _fail_window(ip: str, now_ms: int, purge: bool = False):
+    """维护失败窗口：超过窗口则清零。"""
+    rec = _FAILS.get(ip)
+    if rec and now_ms - rec["first"] > _FAIL_WINDOW_MS:
+        rec["count"] = 0
+    if purge and ip not in _FAILS:
+        _FAILS[ip] = {"count": 0, "first": now_ms}
 
 
 def _require_password() -> bool:
@@ -72,20 +83,30 @@ def check_auth(request) -> bool:
 
 
 async def login_handler(request):
-    """密码登录：POST {password} → 成功设 session cookie。"""
+    """密码登录：POST {password} → 成功设 session cookie。含失败限速。"""
     try:
         body = await request.json()
     except Exception:
         return web.json_response({"ok": False, "error": "bad json"}, status=400)
     if not _require_password():
         return web.json_response({"ok": True, "skip": True})
+    # 登录爆破防护：同一来源连续失败达阈值则短暂锁
+    peer = request.transport.get_extra_info("peername")
+    ip = peer[0] if peer else "unknown"
+    now_ms = int(time.time() * 1000)
+    _fail_window(ip, now_ms, purge=True)
+    if _FAILS[ip]["count"] >= 10:
+        return web.json_response({"ok": False, "error": "too many attempts"}, status=429)
     if body.get("password") == AUTH_PASSWORD:
         import uuid
         sid = uuid.uuid4().hex
         _SESSIONS.add(sid)
+        _FAILS.pop(ip, None)   # 成功登录清零失败计数
         resp = web.json_response({"ok": True})
         resp.set_cookie("okc_session", sid, httponly=True, samesite="Lax", max_age=3600 * 8)
         return resp
+    _FAILS[ip]["count"] += 1
+    _FAILS[ip]["first"] = now_ms
     return web.json_response({"ok": False, "error": "wrong password"}, status=401)
 
 
@@ -105,11 +126,6 @@ def require_auth_middleware():
             return web.Response(status=401, text="Unauthorized")
         return await handler(request)
     return auth_mw
-
-
-def check_token(request) -> bool:
-    """兼容旧调用：密码门下改用 check_auth。保留为 check_auth 别名。"""
-    return check_auth(request)
 
 
 class RealCerebellum:
@@ -516,8 +532,7 @@ async def _ws_loop(ws, clients, command_handler, relay_to_peer):
 
 
 async def ws_kid_handler(request):
-    if not check_token(request):
-        return web.Response(status=401, text="Unauthorized")
+    # 小车端仅监听本机（127.0.0.1），无需额外鉴权
     ws = web.WebSocketResponse()
     await ws.prepare(request)
     return await _ws_loop(ws, core.kid_clients, core.handle_kid_command,
@@ -525,8 +540,7 @@ async def ws_kid_handler(request):
 
 
 async def ws_parent_handler(request):
-    if not check_token(request):
-        return web.Response(status=401, text="Unauthorized")
+    # 家长端鉴权由 require_auth_middleware 拦截（/ws 非白名单路径）
     ws = web.WebSocketResponse()
     await ws.prepare(request)
     return await _ws_loop(ws, core.parent_clients, core.handle_parent_command,
@@ -554,10 +568,13 @@ async def no_cache(request, handler):
 async def control_handler(request):
     """接收干杯助手 MCP 工具的控制命令，调用大脑执行。
     body: {"action": "light"|"strip"|"mute"|"gear"|"horn"|"ebrk", "value": ...}
-    需带 token（X-Auth-Token header 或 ?token=）。
+    小车端 8000 仅监听本机（127.0.0.1），此接口只允许本机干杯助手桥接调用。
     """
-    if not check_token(request):
-        return web.json_response({"ok": False, "error": "unauthorized"}, status=401)
+    # 仅允许本机来源（防远程直接调用）
+    peer = request.transport.get_extra_info("peername")
+    host = peer[0] if peer else ""
+    if host not in ("127.0.0.1", "::1", "localhost"):
+        return web.json_response({"ok": False, "error": "forbidden"}, status=403)
     try:
         body = await request.json()
     except Exception:
