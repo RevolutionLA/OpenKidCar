@@ -171,6 +171,17 @@ OpenKidCar 采用类似真实汽车的分层设计：
 
 # 📌 当前阶段
 
+## ✅ 软件层已就绪 → 正在向真车推进
+
+当前处于「**数字孪生已完整验证决策逻辑，向真实电机/车架落地**」的阶段：
+
+- ✅ 大脑（决策）+ 小脑（实时执行）真实信号链路已在仿真中全链路跑通
+- 🚧 **动力选型计算书**：[docs/powertrain_sizing.md](docs/powertrain_sizing.md) —— 电机/电池/电调选型依据
+- 🚧 **接线图指导书**：[docs/wiring_guide.md](docs/wiring_guide.md) —— 非电子背景照做即接
+- 🚧 **固件待办清单**：[docs/firmware_todo.md](docs/firmware_todo.md) —— 从仿真到真车的软件缺口
+
+> 造车哲学：车架/承重/刹车等安全关键件用成熟现成部件，3D 打印仅用于外观装饰（可绕开）；先让现成的车"开窍"，再谈外观。
+
 ## V0.1 桌面智能车控制 Demo（数字孪生双端）
 
 目标：
@@ -282,6 +293,9 @@ OpenKidCar/
 │   ├── hardware_deployment_guide.md  # 硬件部署指导书（连线/下载/烧录）
 │   ├── communication_protocol.md
 │   ├── hardware_bom.md
+│   ├── powertrain_sizing.md     # 动力系统选型计算书（电机/电池/电调）
+│   ├── wiring_guide.md          # 接线图指导书（拿来即用版）
+│   ├── firmware_todo.md         # 固件待办清单（从仿真到真车）
 │   ├── xiaozhi_integration.md   # 小智语音助手集成方案
 │   ├── development_notes.md     # 开发笔记与状态存档
 │   └── development_log.md
@@ -375,6 +389,8 @@ py-xiaozhi/.venv/Scripts/python.exe digital_twin/backend/xiaozhi_bridge.py 8010
 
 
 开发过程本身，也是项目的一部分。
+
+**最新进度**：[开发日志 Day 7](logs/开发日记/20260816-day7.md) — 从仿真到真车·造车路线规划 + 动力选型 + 接线方案
 
 ---
 
