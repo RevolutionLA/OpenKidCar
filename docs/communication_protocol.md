@@ -107,6 +107,7 @@ uint8_t crc8(const char* data, size_t len) {
 | `LIGHT` | ON / OFF | 前大灯 | ✅ |
 | `STRIP` | 模式,颜色,亮度 | RGB 灯带 | ✅ |
 | `TURN` | L / R / OFF | 转向灯 | ✅ |
+| `STEER` | 0-180 | 转向角度（90=直行，舵机）| ✅ |
 | `MUTE` | ON / OFF | 引擎音效静音 | ✅ |
 | `HORN` | ON / OFF | 鸣笛 | ✅ |
 | `BRAKE` | ON / OFF | 制动（缓刹） | ✅ |

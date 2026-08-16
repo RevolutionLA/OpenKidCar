@@ -171,8 +171,11 @@ class RealCerebellum:
         self.brake = max(0, min(100, int(v)))
 
     def set_steer(self, v):
-        # 真实模式：转向来自物理方向盘，不发送
+        # 方向盘归一化 -1..1 → 舵机角度 0-180（90=直行）
+        # 左打满(v=-1)→左转(小角度)，右打满(v=1)→右转(大角度)
         self.steer = max(-1.0, min(1.0, float(v)))
+        angle = 90 + round(self.steer * 90)
+        self.brain.set_steer(angle)
 
     def set_horn(self, on):
         self.horn = bool(on)

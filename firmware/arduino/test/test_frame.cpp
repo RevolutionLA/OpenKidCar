@@ -17,6 +17,7 @@ int test_get_gear(void);
 bool test_get_light(void);
 int test_get_mute(void);
 int test_get_strip_mode(void);
+int test_get_steer(void);
 bool test_get_brake(void);
 bool test_get_ebrk(void);
 void test_reset(void);
@@ -215,6 +216,22 @@ void test_ebrk_release(void) {
   TEST_ASSERT_FALSE(test_get_brake());  // 解除后刹车也松开
 }
 
+void test_steer_set(void) {
+  test_handle_command("STEER", "90");
+  TEST_ASSERT_EQUAL_INT(90, test_get_steer());
+  test_handle_command("STEER", "0");    // 左满
+  TEST_ASSERT_EQUAL_INT(0, test_get_steer());
+  test_handle_command("STEER", "180");  // 右满
+  TEST_ASSERT_EQUAL_INT(180, test_get_steer());
+}
+
+void test_steer_invalid(void) {
+  test_handle_command("STEER", "-10");  // 越界
+  TEST_ASSERT_EQUAL_INT(90, test_get_steer());
+  test_handle_command("STEER", "270");
+  TEST_ASSERT_EQUAL_INT(90, test_get_steer());
+}
+
 void test_unknown(void) {
   test_handle_command("FOO", "BAR");
   TEST_ASSERT_EQUAL_INT(2, test_get_gear());  // 不崩溃、状态不变
@@ -245,6 +262,8 @@ int main(void) {
   RUN_TEST(test_brake);
   RUN_TEST(test_ebrk);
   RUN_TEST(test_ebrk_release);
+  RUN_TEST(test_steer_set);
+  RUN_TEST(test_steer_invalid);
   RUN_TEST(test_unknown);
   return UNITY_END();
 }

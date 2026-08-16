@@ -46,8 +46,11 @@ int hal_analog_current(void);   // A5 电机电流
 
 // ---- 输出：执行器 ----
 void hal_set_motor(int pwm);                // D9 电机油门 -100..100（负=倒车，双向电调）
-void hal_set_steer(uint8_t pwm);            // D10 转向
+void hal_set_steer(int angle);              // D10 转向舵机 0-180（90=直行）
 void hal_set_headlight(bool on);            // D2 前大灯
 void hal_set_brake_light(uint8_t b);        // D3 刹车灯 0-255
 void hal_set_turn(char dir);                // D4/D5 转向灯 'L'/'R'/' '
 void hal_set_strip(int mode, uint32_t color, uint8_t brightness);  // D11 灯带
+
+// ---- 输入：轮速（真实速度闭环用）----
+int hal_read_speed_kph(void);               // 轮速传感器实测速度 km/h（有符号，负=倒车）

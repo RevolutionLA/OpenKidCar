@@ -9,6 +9,7 @@ GEAR = "GEAR"       # 参数：-1(R倒车) 或 1-4 速度档位
 LIGHT = "LIGHT"     # 参数：ON / OFF 前大灯
 STRIP = "STRIP"     # 参数：模式,颜色,亮度 RGB灯带
 TURN = "TURN"       # 参数：L / R / OFF 转向灯
+STEER = "STEER"     # 参数：0-180 转向角度（90=直行，舵机正装）
 MUTE = "MUTE"       # 参数：ON / OFF 引擎音效静音
 HORN = "HORN"       # 参数：ON / OFF 鸣笛
 BRAKE = "BRAKE"     # 参数：ON / OFF 制动（缓刹）

@@ -147,6 +147,11 @@ class Brain:
         d = direction.upper() if direction in ("L", "R") else "OFF"
         self._send(C.TURN, d)
 
+    def set_steer(self, angle: int):
+        """转向：0-180 角度（90=直行）。"""
+        a = max(0, min(180, int(angle)))
+        self._send(C.STEER, str(a))
+
     def set_horn(self, on: bool):
         """鸣笛：True 开始，False 停止。"""
         self._send(C.HORN, "ON" if on else "OFF")

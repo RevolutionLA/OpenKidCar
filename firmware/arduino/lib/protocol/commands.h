@@ -13,6 +13,7 @@ static const char* const GEAR   = "GEAR";    // 参数：-1(R倒车) 或 1-4 速
 static const char* const LIGHT  = "LIGHT";   // 参数：ON / OFF 前大灯
 static const char* const STRIP  = "STRIP";   // 参数：模式,颜色,亮度 RGB灯带
 static const char* const TURN   = "TURN";    // 参数：L / R / OFF 转向灯
+static const char* const STEER  = "STEER";   // 参数：0-180 转向角度（90=直行，舵机正装）
 static const char* const MUTE   = "MUTE";    // 参数：ON / OFF 引擎音效静音
 static const char* const HORN   = "HORN";    // 参数：ON / OFF 鸣笛
 static const char* const BRAKE  = "BRAKE";   // 参数：ON / OFF 制动（缓刹）

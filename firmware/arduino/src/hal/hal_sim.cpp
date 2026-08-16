@@ -105,11 +105,18 @@ int hal_analog_current(void)  { return 100; }   // 模拟 2A（标定后替换�
 
 // ---- 输出：打印到 stderr（不污染 stdout 协议流）----
 void hal_set_motor(int pwm) { fprintf(stderr, "[SIM] motor PWM=%d\n", pwm); }
-void hal_set_steer(uint8_t pwm) { fprintf(stderr, "[SIM] steer  PWM=%u\n", pwm); }
+void hal_set_steer(int angle) { fprintf(stderr, "[SIM] steer angle=%d\n", angle); }
 void hal_set_headlight(bool on) { fprintf(stderr, "[SIM] headlight=%s\n", on ? "ON" : "OFF"); }
 void hal_set_brake_light(uint8_t b) { fprintf(stderr, "[SIM] brake_light=%u\n", b); }
 void hal_set_turn(char dir) { fprintf(stderr, "[SIM] turn=%c\n", dir); }
 void hal_set_strip(int mode, uint32_t color, uint8_t brightness) {
   fprintf(stderr, "[SIM] strip mode=%d color=%06X brightness=%u\n",
           mode, color, brightness);
+}
+
+// ---- 输入：轮速（sim 端无硬件，用油门估算，供速度闭环演示）----
+int hal_read_speed_kph(void) {
+  int thr = hal_analog_throttle();
+  // 模拟：满油门约 25km/h（4 档上限），linear 估算
+  return thr * 25 / 1023;
 }
