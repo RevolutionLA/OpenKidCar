@@ -14,6 +14,7 @@
 <meta property="og:description" content="一个爸爸亲手为儿子打造的 AI 开源儿童卡丁车。硬件固件软件全部开源。" />
 <meta property="og:url" content="https://RevolutionLA.github.io/OpenKidCar/" />
 <meta name="theme-color" content="#07090d" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230a0807'/%3E%3Crect x='10' y='30' width='44' height='16' rx='6' fill='%23f2b24c'/%3E%3Crect x='18' y='22' width='26' height='10' rx='4' fill='%23d98e2a'/%3E%3Ccircle cx='20' cy='48' r='6' fill='%231a1105' stroke='%23f2b24c' stroke-width='3'/%3E%3Ccircle cx='44' cy='48' r='6' fill='%231a1105' stroke='%23f2b24c' stroke-width='3'/%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet" />
@@ -44,34 +45,34 @@ header.site-header{position:sticky;top:0;z-index:60;background:rgba(10,8,7,0.75)
 .nav-link{font-family:var(--mono);font-size:12px;letter-spacing:0.12em;color:var(--ink-dim);transition:color .2s;border:1px solid var(--stroke-bright);padding:8px 16px;border-radius:8px}
 .nav-link:hover{color:var(--signal);border-color:var(--signal)}
 
-.hero{position:relative;min-height:88vh;display:flex;flex-direction:column;justify-content:center;padding:72px 0;overflow:hidden}
+.hero{position:relative;min-height:82vh;display:flex;flex-direction:column;justify-content:center;padding:64px 0;overflow:hidden}
 .hero::after{content:"";position:absolute;left:50%;top:10%;transform:translateX(-50%);width:820px;height:600px;background:radial-gradient(ellipse at center,rgba(242,178,76,0.10),transparent 62%);z-index:-1;pointer-events:none}
-.kicker{display:inline-flex;align-items:center;gap:10px;font-size:12px;letter-spacing:0.2em;color:var(--signal);margin-bottom:28px;font-family:var(--mono)}
+.kicker{display:inline-flex;align-items:center;gap:10px;font-size:12px;letter-spacing:0.2em;color:var(--signal);margin-bottom:22px;font-family:var(--mono)}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--signal);box-shadow:0 0 0 4px var(--signal-dim),0 0 16px var(--signal)}
-.hero-title{font-family:var(--display);font-size:clamp(42px,9vw,96px);font-weight:700;letter-spacing:-0.02em;line-height:1;margin-bottom:22px;text-wrap:balance}
+.hero-title{font-family:var(--display);font-size:clamp(42px,9vw,96px);font-weight:700;letter-spacing:-0.02em;line-height:1;margin-bottom:18px;text-wrap:balance}
 .hero-title .zh{background:linear-gradient(120deg,var(--signal) 0%,#f0e9df 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
-.hero-en{font-size:clamp(15px,2vw,20px);letter-spacing:0.28em;color:var(--ink-faint);font-family:var(--mono);margin-bottom:10px}
-.hero-zh{font-size:clamp(18px,2.6vw,25px);color:var(--ink);margin-bottom:12px;font-weight:400}
+.hero-en{font-size:clamp(14px,1.8vw,18px);letter-spacing:0.28em;color:var(--ink-faint);font-family:var(--mono);margin-bottom:10px}
+.hero-zh{font-size:clamp(18px,2.4vw,24px);color:var(--ink);margin-bottom:10px;font-weight:400}
 .hero-sub{font-size:15px;color:var(--ink-dim);max-width:620px;line-height:1.8}
-.hero-actions{display:flex;gap:16px;margin-top:44px;flex-wrap:wrap}
+.hero-actions{display:flex;gap:16px;margin-top:36px;flex-wrap:wrap}
 .btn{display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:14px;letter-spacing:0.02em;padding:15px 30px;border-radius:12px;transition:all .25s;border:1px solid transparent;touch-action:manipulation}
 .btn-primary{background:var(--signal);color:#1a1105;font-weight:600;box-shadow:0 0 24px var(--signal-dim)}
 .btn-primary:hover{background:#ffc76b;box-shadow:0 0 36px rgba(242,178,76,0.4);transform:translateY(-2px)}
 .btn-ghost{border:1px solid var(--stroke-bright);color:var(--ink)}
 .btn-ghost:hover{border-color:var(--signal);color:var(--signal);box-shadow:0 0 20px var(--signal-dim)}
-.specbar{display:flex;flex-wrap:wrap;gap:28px;margin-top:52px;padding-top:28px;border-top:1px solid var(--stroke)}
+.specbar{display:flex;flex-wrap:wrap;gap:26px;margin-top:44px;padding-top:24px;border-top:1px solid var(--stroke)}
 .spec{display:flex;align-items:baseline;gap:10px;font-size:13px;color:var(--ink-faint);font-family:var(--mono)}
 .spec strong{color:var(--signal);font-size:16px;font-weight:600}
 
-.section{padding:110px 0;position:relative}
-.sec-tag{display:inline-block;font-size:12px;letter-spacing:0.18em;color:var(--signal);margin-bottom:18px;font-family:var(--mono)}
-.sec-title{font-family:var(--display);font-size:clamp(32px,5vw,52px);font-weight:700;letter-spacing:-0.02em;line-height:1.1;margin-bottom:50px;text-wrap:balance}
+.section{padding:86px 0;position:relative}
+.sec-tag{display:inline-block;font-size:12px;letter-spacing:0.18em;color:var(--signal);margin-bottom:14px;font-family:var(--mono)}
+.sec-title{font-family:var(--display);font-size:clamp(32px,5vw,52px);font-weight:700;letter-spacing:-0.02em;line-height:1.1;margin-bottom:38px;text-wrap:balance}
 
-.quote-block{background:var(--space-1);border:1px solid var(--stroke);border-left:3px solid var(--signal);border-radius:var(--radius);padding:36px 40px;margin-bottom:60px}
+.quote-block{background:var(--space-1);border:1px solid var(--stroke);border-left:3px solid var(--signal);border-radius:var(--radius);padding:34px 40px;margin:6px 0 46px}
 .quote-block p{font-size:clamp(18px,2.4vw,24px);color:var(--ink);line-height:1.8}
 .quote-block cite{display:block;margin-top:16px;font-style:normal;font-size:14px;color:var(--ink-faint);font-family:var(--mono)}
 
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:22px}
 .card{background:linear-gradient(180deg,var(--space-2),var(--space-1));border:1px solid var(--stroke);border-radius:var(--radius);padding:32px;transition:transform .3s,border-color .3s,box-shadow .3s}
 .card:hover{transform:translateY(-5px);border-color:var(--stroke-bright);box-shadow:0 16px 44px rgba(0,0,0,0.5),0 0 28px var(--signal-dim)}
 .card-icon{font-size:26px;color:var(--signal);margin-bottom:16px;display:block}
@@ -120,16 +121,13 @@ a:focus-visible{outline:2px solid var(--signal);outline-offset:3px;border-radius
   </div>
 </section>
 
-<section class="section container">
+<section class="section container" id="vision">
+  <span class="sec-tag">01 · 愿景</span>
+  <h2 class="sec-title">在 AI 时代，一个人能否造一辆车？</h2>
   <div class="quote-block reveal">
     <p>这辆车不一定是世界上最快的，也不一定是最豪华的。但它会拥有——爸爸亲手设计的外观、爸爸写的代码、爸爸搭建的电子系统。</p>
     <cite>&gt; 我希望未来孩子长大以后，记住的不只是一辆车，而是：曾经爸爸尝试用自己的双手创造一些东西。</cite>
   </div>
-</section>
-
-<section class="section container" id="vision">
-  <span class="sec-tag">01 · 愿景</span>
-  <h2 class="sec-title">在 AI 时代，一个人能否造一辆车？</h2>
   <div class="grid">
     <article class="card reveal"><span class="card-icon">🤖</span><h3>AI 驱动创造</h3><p>产品设计、软件开发、硬件学习、电路设计、三维建模、文档与调试——借助 AI，一个普通人也能完成过去需要专业团队才能做的硬件创造。</p></article>
     <article class="card reveal"><span class="card-icon">🧩</span><h3>模块化架构</h3><p>类似真实汽车的分层设计：软件平台、模块化硬件架构、可扩展的智能车系统。不再是个黑盒。</p></article>
