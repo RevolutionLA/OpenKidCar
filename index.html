@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<title>OpenKidCar · 干杯一号 — AI 驱动的智能儿童卡丁车</title>
+<meta name="description" content="OpenKidCar「干杯一号」—— 一个爸爸亲手为儿子打造的 AI 驱动开源智能儿童卡丁车。软件 / 硬件 / 电路 / 三维建模全部开源，探索 AI 时代普通人创造真实产品的能力。" />
+<meta name="author" content="刘昂 (RevolutionLA)" />
+<meta name="robots" content="index, follow" />
+<link rel="canonical" href="https://RevolutionLA.github.io/OpenKidCar/" />
+<meta property="og:type" content="article" />
+<meta property="og:title" content="OpenKidCar · 干杯一号 — AI 驱动的智能儿童卡丁车" />
+<meta property="og:description" content="一个爸爸亲手为儿子打造的 AI 开源儿童卡丁车。硬件固件软件全部开源。" />
+<meta property="og:url" content="https://RevolutionLA.github.io/OpenKidCar/" />
+<meta name="theme-color" content="#07090d" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --space-0:#0a0807;--space-1:#120d09;--space-2:#1a120b;
+  --ink:#f0e9df;--ink-dim:#b5a48f;--ink-faint:#7a6a55;
+  --signal:#f2b24c;--signal-dim:rgba(242,178,76,0.18);--amber:#f05a3c;
+  --grid:rgba(190,150,110,0.07);--stroke:rgba(190,150,110,0.20);--stroke-bright:rgba(242,178,76,0.42);
+  --display:'Space Grotesk','Noto Sans SC',sans-serif;
+  --body:'Noto Sans SC',-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
+  --mono:'JetBrains Mono','SFMono-Regular',Consolas,monospace;--max:1120px;--radius:14px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{color-scheme:dark;scroll-behavior:smooth}
+body{font-family:var(--body);background:var(--space-0);color:var(--ink);line-height:1.75;font-weight:300;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.mono{font-family:var(--mono)}em{font-style:normal;font-weight:600;color:var(--amber)}strong{font-weight:600;color:var(--ink)}
+a{color:inherit;text-decoration:none}
+::selection{background:var(--signal);color:#1a1105}
+.container{max-width:var(--max);margin:0 auto;padding:0 28px;position:relative}
+.grid-bg{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:64px 64px;mask-image:radial-gradient(ellipse 90% 70% at 50% 30%,#000 45%,transparent 100%);-webkit-mask-image:radial-gradient(ellipse 90% 70% at 50% 30%,#000 45%,transparent 100%)}
+
+header.site-header{position:sticky;top:0;z-index:60;background:rgba(10,8,7,0.75);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--stroke)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:66px;gap:20px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-weight:600;font-size:15px}
+.brand-glyph{color:var(--signal);font-weight:700}
+.nav-right{display:flex;align-items:center;gap:22px}
+.nav-link{font-family:var(--mono);font-size:12px;letter-spacing:0.12em;color:var(--ink-dim);transition:color .2s;border:1px solid var(--stroke-bright);padding:8px 16px;border-radius:8px}
+.nav-link:hover{color:var(--signal);border-color:var(--signal)}
+
+.hero{position:relative;min-height:88vh;display:flex;flex-direction:column;justify-content:center;padding:72px 0;overflow:hidden}
+.hero::after{content:"";position:absolute;left:50%;top:10%;transform:translateX(-50%);width:820px;height:600px;background:radial-gradient(ellipse at center,rgba(242,178,76,0.10),transparent 62%);z-index:-1;pointer-events:none}
+.kicker{display:inline-flex;align-items:center;gap:10px;font-size:12px;letter-spacing:0.2em;color:var(--signal);margin-bottom:28px;font-family:var(--mono)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--signal);box-shadow:0 0 0 4px var(--signal-dim),0 0 16px var(--signal)}
+.hero-title{font-family:var(--display);font-size:clamp(42px,9vw,96px);font-weight:700;letter-spacing:-0.02em;line-height:1;margin-bottom:22px;text-wrap:balance}
+.hero-title .zh{background:linear-gradient(120deg,var(--signal) 0%,#f0e9df 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero-en{font-size:clamp(15px,2vw,20px);letter-spacing:0.28em;color:var(--ink-faint);font-family:var(--mono);margin-bottom:10px}
+.hero-zh{font-size:clamp(18px,2.6vw,25px);color:var(--ink);margin-bottom:12px;font-weight:400}
+.hero-sub{font-size:15px;color:var(--ink-dim);max-width:620px;line-height:1.8}
+.hero-actions{display:flex;gap:16px;margin-top:44px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:14px;letter-spacing:0.02em;padding:15px 30px;border-radius:12px;transition:all .25s;border:1px solid transparent;touch-action:manipulation}
+.btn-primary{background:var(--signal);color:#1a1105;font-weight:600;box-shadow:0 0 24px var(--signal-dim)}
+.btn-primary:hover{background:#ffc76b;box-shadow:0 0 36px rgba(242,178,76,0.4);transform:translateY(-2px)}
+.btn-ghost{border:1px solid var(--stroke-bright);color:var(--ink)}
+.btn-ghost:hover{border-color:var(--signal);color:var(--signal);box-shadow:0 0 20px var(--signal-dim)}
+.specbar{display:flex;flex-wrap:wrap;gap:28px;margin-top:52px;padding-top:28px;border-top:1px solid var(--stroke)}
+.spec{display:flex;align-items:baseline;gap:10px;font-size:13px;color:var(--ink-faint);font-family:var(--mono)}
+.spec strong{color:var(--signal);font-size:16px;font-weight:600}
+
+.section{padding:110px 0;position:relative}
+.sec-tag{display:inline-block;font-size:12px;letter-spacing:0.18em;color:var(--signal);margin-bottom:18px;font-family:var(--mono)}
+.sec-title{font-family:var(--display);font-size:clamp(32px,5vw,52px);font-weight:700;letter-spacing:-0.02em;line-height:1.1;margin-bottom:50px;text-wrap:balance}
+
+.quote-block{background:var(--space-1);border:1px solid var(--stroke);border-left:3px solid var(--signal);border-radius:var(--radius);padding:36px 40px;margin-bottom:60px}
+.quote-block p{font-size:clamp(18px,2.4vw,24px);color:var(--ink);line-height:1.8}
+.quote-block cite{display:block;margin-top:16px;font-style:normal;font-size:14px;color:var(--ink-faint);font-family:var(--mono)}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px}
+.card{background:linear-gradient(180deg,var(--space-2),var(--space-1));border:1px solid var(--stroke);border-radius:var(--radius);padding:32px;transition:transform .3s,border-color .3s,box-shadow .3s}
+.card:hover{transform:translateY(-5px);border-color:var(--stroke-bright);box-shadow:0 16px 44px rgba(0,0,0,0.5),0 0 28px var(--signal-dim)}
+.card-icon{font-size:26px;color:var(--signal);margin-bottom:16px;display:block}
+.card h3{font-family:var(--display);font-size:19px;font-weight:600;margin-bottom:12px}
+.card p{color:var(--ink-dim);font-size:15px;line-height:1.8}
+
+footer.site-footer{border-top:1px solid var(--stroke);padding:36px 0 46px}
+.footer-row{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--ink-faint);font-family:var(--mono)}
+.footer-row a:hover{color:var(--signal)}
+a:focus-visible{outline:2px solid var(--signal);outline-offset:3px;border-radius:4px}
+@media (max-width:720px){.section{padding:76px 0}.hero{min-height:auto;padding:64px 0 80px}}
+.reveal{opacity:0;transform:translateY(30px);transition:opacity .8s cubic-bezier(.16,1,.3,1),transform .8s cubic-bezier(.16,1,.3,1)}
+.reveal.visible{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}*{scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="grid-bg" aria-hidden="true"></div>
+
+<header class="site-header">
+  <nav class="nav container">
+    <a class="brand" href="/"><span class="brand-glyph mono">&gt;_</span> OpenKidCar</a>
+    <div class="nav-right">
+      <a class="nav-link" href="https://github.com/RevolutionLA/OpenKidCar" target="_blank" rel="noopener noreferrer">SOURCE ↗</a>
+    </div>
+  </nav>
+</header>
+
+<section class="hero">
+  <div class="container">
+    <p class="kicker"><span class="dot"></span> OPEN_SOURCE · AI + HARDWARE + 父爱</p>
+    <div class="hero-en">干杯一号 · GANBEI NO.1</div>
+    <h1 class="hero-title">爸爸想给你<br/>做一辆小汽车</h1>
+    <p class="hero-zh">AI 驱动的智能儿童卡丁车 —— 一个爸爸亲手为儿子打造。</p>
+    <p class="hero-sub">全程开源：软件、硬件、电路、三维建模。不是买一辆玩具车给你，而是成为你的榜样。</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="https://github.com/RevolutionLA/OpenKidCar" target="_blank" rel="noopener noreferrer">在 GitHub 查看 →</a>
+      <a class="btn btn-ghost" href="/">REVLA 主页</a>
+    </div>
+    <div class="specbar">
+      <span class="spec">特点 <strong>AI 驱动</strong></span>
+      <span class="spec">架构 <strong>模块化</strong></span>
+      <span class="spec">协议 <strong>MIT</strong></span>
+      <span class="spec">初衷 <strong>给 3 岁儿子</strong></span>
+    </div>
+  </div>
+</section>
+
+<section class="section container">
+  <div class="quote-block reveal">
+    <p>这辆车不一定是世界上最快的，也不一定是最豪华的。但它会拥有——爸爸亲手设计的外观、爸爸写的代码、爸爸搭建的电子系统。</p>
+    <cite>&gt; 我希望未来孩子长大以后，记住的不只是一辆车，而是：曾经爸爸尝试用自己的双手创造一些东西。</cite>
+  </div>
+</section>
+
+<section class="section container" id="vision">
+  <span class="sec-tag">01 · 愿景</span>
+  <h2 class="sec-title">在 AI 时代，一个人能否造一辆车？</h2>
+  <div class="grid">
+    <article class="card reveal"><span class="card-icon">🤖</span><h3>AI 驱动创造</h3><p>产品设计、软件开发、硬件学习、电路设计、三维建模、文档与调试——借助 AI，一个普通人也能完成过去需要专业团队才能做的硬件创造。</p></article>
+    <article class="card reveal"><span class="card-icon">🧩</span><h3>模块化架构</h3><p>类似真实汽车的分层设计：软件平台、模块化硬件架构、可扩展的智能车系统。不再是个黑盒。</p></article>
+    <article class="card reveal"><span class="card-icon">🏠</span><h3>普通家庭也能参与</h3><p>一个开源、可复现、普通家庭也可以上手的 Maker 项目。OpenKidCar 同时是一次 AI 如何帮助普通人创造真实世界产品的实验。</p></article>
+  </div>
+</section>
+
+<section class="section container" id="stack">
+  <span class="sec-tag">02 · 技术栈</span>
+  <h2 class="sec-title">软硬一体的完整系统</h2>
+  <div class="grid">
+    <article class="card reveal"><span class="card-icon">⚙️</span><h3>软件 / Firmware</h3><p>固件层之上是清晰的控制逻辑，正在向更智能的驱动演进。</p></article>
+    <article class="card reveal"><span class="card-icon">🔌</span><h3>硬件 / Hardware</h3><p>完整电路与 IO 设计——从电机驱动到传感器，每一根线都可循。</p></article>
+    <article class="card reveal"><span class="card-icon">📐</span><h3>车体 / CAD</h3><p>三维建模与车体设计文件开源，科幻赛车风格的整车图纸。</p></article>
+    <article class="card reveal"><span class="card-icon">🧠</span><h3>AI / 智能化</h3><p>面向感知与自主能力的嵌入式智能系统，向「聪明的小车」演进。</p></article>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container footer-row">
+    <span>© <span id="year"></span> 刘昂 (RevolutionLA)</span>
+    <span><a href="/">revolutionla.github.io</a> · <a href="https://github.com/RevolutionLA/OpenKidCar" target="_blank" rel="noopener noreferrer">OpenKidCar ↗</a></span>
+  </div>
+</footer>
+
+<script>
+document.getElementById('year').textContent=new Date().getFullYear();
+var els=document.querySelectorAll('.card');var io='IntersectionObserver'in window?new IntersectionObserver(function(e){e.forEach(function(x){if(x.isIntersecting){x.target.classList.add('visible');io.unobserve(x.target)}})},{threshold:0.1}):null;
+els.forEach(function(el){if(io){el.classList.add('reveal');io.observe(el)}else{el.classList.add('visible')}});
+</script>
+</body>
+</html>
