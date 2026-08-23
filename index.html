@@ -73,6 +73,7 @@ header.site-header{position:sticky;top:0;z-index:60;background:rgba(10,8,7,0.75)
 .quote-block cite{display:block;margin-top:16px;font-style:normal;font-size:14px;color:var(--ink-faint);font-family:var(--mono)}
 
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:22px}
+.grid-2{grid-template-columns:repeat(auto-fit,minmax(480px,1fr))}
 .card{background:linear-gradient(180deg,var(--space-2),var(--space-1));border:1px solid var(--stroke);border-radius:var(--radius);padding:32px;transition:transform .3s,border-color .3s,box-shadow .3s}
 .card:hover{transform:translateY(-5px);border-color:var(--stroke-bright);box-shadow:0 16px 44px rgba(0,0,0,0.5),0 0 28px var(--signal-dim)}
 .card-icon{font-size:26px;color:var(--signal);margin-bottom:16px;display:block}
@@ -138,7 +139,7 @@ a:focus-visible{outline:2px solid var(--signal);outline-offset:3px;border-radius
 <section class="section container" id="stack">
   <span class="sec-tag">02 · 技术栈</span>
   <h2 class="sec-title">软硬一体的完整系统</h2>
-  <div class="grid">
+  <div class="grid grid-2">
     <article class="card reveal"><span class="card-icon">⚙️</span><h3>软件 / Firmware</h3><p>固件层之上是清晰的控制逻辑，正在向更智能的驱动演进。</p></article>
     <article class="card reveal"><span class="card-icon">🔌</span><h3>硬件 / Hardware</h3><p>完整电路与 IO 设计——从电机驱动到传感器，每一根线都可循。</p></article>
     <article class="card reveal"><span class="card-icon">📐</span><h3>车体 / CAD</h3><p>三维建模与车体设计文件开源，科幻赛车风格的整车图纸。</p></article>
