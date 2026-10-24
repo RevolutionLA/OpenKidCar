@@ -1,0 +1,42 @@
+name: ci
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  python-tests:
+    name: 大脑（Python）单元测试
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: software/raspberry_pi
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install (slim)
+        # 测试只依赖标准库 + pyserial；语音/音频依赖留在 requirements.txt 给真机用，
+        # 不在这里装，避免 CI 因缺 PortAudio 等系统库而假红。
+        run: python -m pip install --upgrade pip pyserial
+      - name: unittest
+        run: python -m unittest discover -s tests -v
+
+  firmware-native:
+    name: 小脑（C++）native 协议测试
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: firmware/arduino
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install PlatformIO
+        run: python -m pip install --upgrade pip platformio
+      - name: pio test -e native
+        run: pio test -e native

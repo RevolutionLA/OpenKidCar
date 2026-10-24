@@ -46,3 +46,6 @@ software/raspberry_pi/py-xiaozhi/
 .agents/
 skills-lock.json
 .claude/skills/
+
+# 本地 AI 工具个人配置（不入库）
+.claude/settings.local.json

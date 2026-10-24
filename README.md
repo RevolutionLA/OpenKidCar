@@ -299,10 +299,10 @@ OpenKidCar/
 │   ├── xiaozhi_integration.md   # 小智语音助手集成方案
 │   ├── development_notes.md     # 开发笔记与状态存档
 │   └── development_log.md
-├── hardware/
-│   ├── bom/               # BOM 清单
-│   ├── circuit/           # 电路设计
-│   └── pcb/               # PCB 设计
+├── hardware/              # ⚠️ 设计稿尚在补充中，现状与计划见 hardware/README.md
+│   ├── bom/               # BOM 清单（规划中）
+│   ├── circuit/           # 电路设计（规划中）
+│   └── pcb/               # PCB 设计（规划中）
 ├── firmware/
 │   └── arduino/           # Arduino 固件
 ├── software/
@@ -341,6 +341,7 @@ OpenKidCar/
 # 一键启动：数字孪生双端 + 干杯助手桥接
 cd software/raspberry_pi
 scripts/start_xiaozhi.bat            # Windows：同时起 twin_server + xiaozhi_bridge
+scripts/start_twin.sh                # Linux / macOS / 树莓派：等价脚本（加 --with-assistant 起桥接）
 
 # 或手动分别启动：
 .venv/Scripts/python.exe digital_twin/backend/twin_server.py 8000 8001
